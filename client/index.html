@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>マークダウンメモ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <strong></strong>
+    <button id="push-btn" onclick="push()" style="display:none;">Push</button>
+    <button id="pull-btn" onclick="pull()" style="display:none;">Pull</button>
+    <button id="rename-btn">
+      <img src="icons/edit.svg" width="16" height="16" alt="名前変更">
+    </button>
+  </header>
+
+  <div id="control-row">
+    <span id="mode-label">プレビュー中</span>
+    <button class="btn-toggle" onclick="togglePane()">
+      <img class="btn-icon btn-icon--pen" width="20" height="20" alt="編集">
+    </button>
+  </div>
+
+  <div id="app">
+    <textarea id="editor" spellcheck="false"></textarea>
+    <div id="preview"></div>
+  </div>
+
+  <script type="module" src="js/ui.js"></script>
+</body>
+</html>
