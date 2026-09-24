@@ -1,0 +1,382 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: sans-serif;
+  background: #f5f5f4;
+  color: #1c1c1a;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  letter-spacing: 1px;
+}
+
+/* ----------------------------------------
+   Header
+---------------------------------------- */
+
+header {
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e2e2df;
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+header strong {
+  color: #1c1c1a;
+  font-weight: 500;
+  font-size: 16px;
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+header strong::-webkit-scrollbar { display: none; }
+header a { color: #77a1ff; text-decoration: none; }
+header a:hover { color: #8595b9; text-decoration: underline; }
+header span { color: #000; }
+
+#rename-btn {
+  margin-left: auto;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------
+   Control row
+---------------------------------------- */
+
+#control-row {
+  padding: 6px 12px;
+  background: #fafaf9;
+  border-bottom: 1px solid #e2e2df;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #888;
+  height: 36px;
+}
+#control-row #mode-label { flex: 1; }
+
+.btn-toggle { border: none; background: none; user-select: none; }
+.tip { display: inline-flex; align-items: center; gap: 6px; }
+
+.btn-icon--pen  { content: url("icons/pen.svg");  }
+.btn-icon--book { content: url("icons/book.svg"); }
+
+/* ----------------------------------------
+   App layout
+---------------------------------------- */
+
+#app {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+#app.mode-edit #editor   { display: flex; }
+#app.mode-preview #preview { display: block; }
+
+#editor, #preview {
+  display: none;
+  width: 100%;
+  scrollbar-width: thin;
+}
+
+/* ----------------------------------------
+   Editor
+---------------------------------------- */
+
+textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 16px;
+  padding-bottom: 90px;
+  font-family: "Menlo", "Monaco", "Consolas", monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #1c1c1a;
+  background: #fff;
+  tab-size: 2;
+  white-space: pre;
+}
+
+/* ----------------------------------------
+   Preview: base
+---------------------------------------- */
+
+#preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 20vh 20px;
+  font-size: 16px;
+  color: #1c1c1a;
+}
+#preview h1 { font-size: 22px; font-weight: 600; margin: 0; }
+#preview h2 { font-size: 18px; font-weight: 600; margin: 0.8em 0 0.4em; border-bottom: 1px solid #e2e2df; padding-bottom: 4px; }
+#preview h3 { font-size: 15px; font-weight: 600; margin: 0.6em 0 0.3em; }
+#preview p  { margin: 0.4em 0; }
+#preview strong { font-weight: 600; }
+#preview em { font-style: italic; }
+#preview hr { border: none; border-top: 1px solid #868686; margin: 1em 0; }
+#preview blockquote { border-left: 3px solid #e2e2df; margin: 0.6em 0; padding: 4px 12px; color: #666; }
+#preview a { color: #2563eb; text-decoration: none; }
+#preview a:hover { text-decoration: underline; }
+.link-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}
+
+/* ----------------------------------------
+   Preview: code
+---------------------------------------- */
+
+code {
+  font-family: "Menlo", "Monaco", monospace;
+  font-size: 11px;
+  background: #dadada;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #444;
+}
+#preview code { font-size: 12px; padding: 1px 4px; }
+#preview pre {
+  background: #f5f5f4;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  overflow-x: auto;
+  margin: 0.6em 0;
+  scrollbar-width: thin;
+}
+#preview pre code {
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  margin-right: 24px;
+}
+
+/* ----------------------------------------
+   Preview: code block copy button
+---------------------------------------- */
+
+.code-block-wrapper {
+  position: relative;
+}
+.copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 1;
+}
+/* PC: ホバーで表示 */
+@media (hover: hover) {
+  .code-block-wrapper:hover .copy-btn,
+  .copy-btn.copied {
+    display: block;
+  }
+}
+/* スマホ: タップでトグル */
+@media (hover: none) {
+  .code-block-wrapper.touch-active .copy-btn {
+    display: block;
+  }
+}
+
+/* ----------------------------------------
+   Preview: lists
+---------------------------------------- */
+
+#preview ul, #preview ol { padding-left: 1.5em; margin: 0.4em 0; }
+#preview li { margin: 0.1em 0; }
+#preview .list-depth-0 { list-style-type: disc; }
+#preview .list-depth-1 { list-style-type: circle; }
+
+/* ----------------------------------------
+   Preview: table
+---------------------------------------- */
+
+#preview table {
+  border-collapse: collapse;
+  width: fit-content;
+  min-width: 75vw;
+  margin: 0.6em auto;
+  font-size: 16px;
+}
+#preview th,
+#preview td {
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+}
+#preview th {
+  background: #f5f5f4;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 交互に濃淡 */
+#preview tbody tr:nth-child(odd) { background: #ececec; }
+
+/* @mask: 列を隠す */
+#preview .mask-cell,
+#preview .mask-cell code {
+  color: transparent;
+  background-color: currentColor;
+  border-radius: 3px;
+  user-select: none;
+}
+/* 列ホバーで列全体表示 */
+#preview .mask-cell.revealed {
+  color: inherit;
+  background-color: transparent;
+}
+#preview .mask-cell.revealed code {
+  color: #444;
+  background-color: #dadada;
+}
+
+/* @masks: セルを隠す */
+#preview .masks-cell,
+#preview .masks-cell a,
+#preview .masks-cell code {
+  color: transparent;
+  background-color: transparent;
+  border-radius: 3px;
+  user-select: none;
+}
+#preview .masks-cell a svg { display: none; }
+
+/*　行ホバーで行全体表示、行クリックで表示/非表示　*/
+#preview .masks-row:hover .masks-cell,
+#preview .masks-row.revealed .masks-cell:not(.hide-col),
+#preview .masks-row.revealed .hide-col.masks-cell.revealed {
+  color: inherit;
+}
+/* リンクとsvgと<code>にも対応 */
+#preview .masks-row:hover .masks-cell:not(.hide-col) a,
+#preview .masks-row:hover .masks-cell.hide-col.revealed a {
+  pointer-events: auto;
+  color: #2563eb;
+}
+#preview .masks-row:hover .masks-cell:not(.hide-col) a svg,
+#preview .masks-row:hover .masks-cell.hide-col.revealed a svg {
+  display: inline;
+}
+#preview .masks-row:hover .masks-cell:not(.hide-col) code,
+#preview .masks-row:hover .masks-cell.hide-col.revealed code {
+  color: #444;
+  background: #dadada;
+}
+#preview .masks-row.revealed .masks-cell:not(.hide-col) a,
+#preview .masks-row.revealed .hide-col.masks-cell.revealed a {
+  color: #2563eb;
+}
+#preview .masks-row.revealed .masks-cell:not(.hide-col) a svg,
+#preview .masks-row.revealed .hide-col.masks-cell.revealed a svg {
+  display: inline;
+}
+#preview .masks-row.revealed .masks-cell:not(.hide-col) code,
+#preview .masks-row.revealed .hide-col.masks-cell.revealed code {
+  color: #444;
+  background: #dadada;
+}
+
+/* @hide 列閉じ: 細い帯として表示 */
+#preview .hide-col {
+  width: 6px;
+  min-width: 6px;
+  max-width: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0 !important;
+  color: transparent;
+  background: #ccc;
+  cursor: col-resize;
+  border: none;
+}
+#preview th.hide-col { color: transparent; }
+#preview .hide-col a {
+  pointer-events: none;
+  color: transparent;
+}
+#preview .hide-col a svg { display: none; }
+#preview .hide-col code {
+  color: transparent;
+  background: transparent;
+}
+/* @hide閉じ状態かつ@masksホバー時 */
+#preview .masks-row:hover .hide-col.masks-cell:not(.revealed) {
+  color: transparent;
+}
+
+/* 開く */
+#preview .hide-col.revealed {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  overflow: visible;
+  white-space: normal;
+  padding: 6px 10px !important;
+  background: inherit;
+  cursor: default;
+  border: 1px solid #ddd;
+}
+#preview th.hide-col.revealed { color: #1c1c1a; }
+#preview .hide-col.revealed:not(.masks-cell) { color: inherit; }
+#preview .hide-col.revealed:not(.masks-cell) a {
+  pointer-events: auto;
+  color: #2563eb;
+}
+
+/* ----------------------------------------
+   Preview: callout
+---------------------------------------- */
+
+.callout {
+  border-left: 3px solid;
+  padding: 8px 12px;
+  margin: 0.6em 0;
+  background: #f9f9f9;
+  border-radius: 0 4px 4px 0;
+}
+.callout-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+details.callout > summary.callout-title {
+  cursor: pointer;
+  user-select: none;
+}
+.callout-body { margin-top: 6px; }
+
+/* ----------------------------------------
+   @in input
+---------------------------------------- */
+
+.in-input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-bottom: 10px;
+  width: stretch;
+  font-size: 1em;
+}
