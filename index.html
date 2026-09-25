@@ -29,6 +29,14 @@
     <div id="preview"></div>
   </div>
 
+  <script>
+    const redirectPath = sessionStorage.getItem('redirect_path');
+    if (redirectPath) {
+      sessionStorage.removeItem('redirect_path');
+      history.replaceState(null, '', redirectPath);
+    }
+  </script>
+
   <script type="module" src="js/ui.js"></script>
 </body>
 </html>
