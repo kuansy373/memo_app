@@ -32,24 +32,17 @@ const pullNotes = new Set();
 // 認証チェック
 // ----------------------------------------
 
+let isLoggedIn = false;
+
 async function checkAuth() {
   try {
     const res = await fetch(`${API_BASE}/auth/status`, { credentials: 'include' });
     const { loggedIn } = await res.json();
-    if (!loggedIn) {
-      document.body.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;">
-          <p>ログインが必要です</p>
-          <a href="${API_BASE}/auth/google" style="padding:8px 16px;background:#4285f4;color:#fff;border-radius:4px;text-decoration:none;">Googleでログイン</a>
-        </div>
-      `;
-    }
+    isLoggedIn = loggedIn;
   } catch (e) {
-    // サーバーに繋がらない場合はそのまま表示
+    isLoggedIn = false;
   }
 }
-
-checkAuth();
 
 // ----------------------------------------
 // Preview
@@ -182,17 +175,14 @@ if (localStorage.getItem('note:' + rootNoteKey) === null) {
 
 document.getElementById('app').className = 'mode-edit';
 
-(function initFromURL() {
+function initFromURL() {
   const fullPath = decodeURIComponent(location.pathname);
   const isBase = fullPath === APP_BASE.slice(0, -1) || fullPath === APP_BASE;
   const path = (fullPath.startsWith(APP_BASE) && !isBase)
     ? fullPath
     : rootNoteKey;
-
-  // currentNote・breadcrumbs は navigation.js の変数なので switchNote 経由でセット
-  // save: false で既存データを上書きしない
   switchNote(path, { save: false });
-})();
+}
 
 // ----------------------------------------
 // popstate
@@ -386,6 +376,7 @@ function checkPushStatus() {
 }
 
 async function checkCurrentNote() {
+  if (!isLoggedIn) return;
   const note = currentNote; // 非同期中に切り替わっても note を固定
 
   if (pullNotes.has(note)) {
@@ -469,3 +460,5 @@ window.push = push;
 window.pull = pullCurrentNote;
 
 update();
+
+checkAuth().then(() => initFromURL());
