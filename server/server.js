@@ -9,14 +9,14 @@ const { pool, init } = require('./db');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(cors({
   origin: process.env.FRONTEND_ORIGIN,
   credentials: true,
 }));
 
-app.use((req, res, next) => {
-  express.json()(req, res, next);
-});
+app.use(express.json());
 
 app.use(session({
   store: new pgSession({
@@ -27,7 +27,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30日
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  },
 }));
 
 app.use(passport.initialize());
