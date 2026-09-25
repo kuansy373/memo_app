@@ -169,7 +169,14 @@ if (localStorage.getItem('note:' + rootNoteKey) === null) {
 @alias r ${APP_BASE}root
 @lastPath -
 - [-](r:/デモ)
-- [-](r:/設定)`
+- [-](r:/設定)
+- [ログイン/ログアウト](r:/form)`
+  );
+}
+
+if (localStorage.getItem('note:' + APP_BASE + 'form') === null) {
+  localStorage.setItem('note:' + APP_BASE + 'form',
+    '- [ログイン](https://memo-app-server-bew5.onrender.com/auth/google)\n- [ログアウト](https://memo-app-server-bew5.onrender.com/auth/logout)'
   );
 }
 
@@ -228,10 +235,30 @@ preview.addEventListener('click', e => {
   if (!wrapper) {
     document.querySelectorAll('.code-block-wrapper.touch-active')
       .forEach(el => el.classList.remove('touch-active'));
-    return;
+  } else {
+    if (!e.target.closest('.copy-btn')) {
+      wrapper.classList.toggle('touch-active');
+    }
   }
-  if (e.target.closest('.copy-btn')) return;
-  wrapper.classList.toggle('touch-active');
+
+  // ログイン/ログアウトリンクのインターセプト
+  const link = e.target.closest('a');
+  if (!link) return;
+  const href = link.getAttribute('href') || '';
+  const loginURL = `${API_BASE}/auth/google`;
+  const logoutURL = `${API_BASE}/auth/logout`;
+
+  if (href === loginURL) {
+    if (isLoggedIn) {
+      e.preventDefault();
+      alert('すでにログイン済みです。アカウントを切り替える場合は一度ログアウトしてください。');
+    }
+  } else if (href === logoutURL) {
+    if (!isLoggedIn) {
+      e.preventDefault();
+      alert('ログインしていないため、ログアウトできません。');
+    }
+  }
 });
 
 // ----------------------------------------
