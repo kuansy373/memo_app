@@ -421,7 +421,7 @@ async function checkCurrentNote() {
 
     // 非同期完了前に別ノートへ移動していたら結果を捨てる
     if (note !== currentNote) return;
-
+    if (!res.ok && res.status !== 404) return; // 404以外のエラーは無視
     if (res.status === 404) {
       // サーバーに存在しない → 空をベースラインとして push を促す
       baselineMap.set(note, '');
@@ -443,7 +443,7 @@ async function pullCurrentNote() {
   const note = currentNote;
   try {
     const res = await fetch(`${API_BASE}/api/notes${note}`, { credentials: 'include' });
-    if (res.status === 404) return;
+    if (!res.ok) return; // 403・401 などはここで止める
     const { content } = await res.json();
     storage.set(note, content);
     baselineMap.set(note, content); // ノートごとにベースラインを更新
