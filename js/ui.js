@@ -177,14 +177,10 @@ document.getElementById('app').className = 'mode-edit';
 
 function initFromURL() {
   const fullPath = decodeURIComponent(location.pathname);
-  console.log('initFromURL fullPath:', fullPath);
-  console.log('APP_BASE:', APP_BASE);
   const isBase = fullPath === APP_BASE.slice(0, -1) || fullPath === APP_BASE;
-  console.log('isBase:', isBase);
   const path = (fullPath.startsWith(APP_BASE) && !isBase)
     ? fullPath
     : rootNoteKey;
-  console.log('path:', path);
   switchNote(path, { save: false });
 }
 
