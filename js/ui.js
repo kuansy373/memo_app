@@ -174,8 +174,8 @@ if (localStorage.getItem('note:' + rootNoteKey) === null) {
   );
 }
 
-if (localStorage.getItem('note:' + APP_BASE + 'form') === null) {
-  localStorage.setItem('note:' + APP_BASE + 'form',
+if (localStorage.getItem('note:' + APP_BASE + 'root/form') === null) {
+  localStorage.setItem('note:' + APP_BASE + 'root/form',
     '- [ログイン](https://memo-app-server-bew5.onrender.com/auth/google)\n- [ログアウト](https://memo-app-server-bew5.onrender.com/auth/logout)'
   );
 }
