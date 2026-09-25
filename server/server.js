@@ -60,6 +60,16 @@ app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'em
 app.get('/auth/callback',
   passport.authenticate('google', { failureRedirect: '/auth/failure' }),
   (req, res) => {
+    // ここでメールアドレスを確認する
+    const email = req.user?.emails?.[0]?.value;
+    if (email !== process.env.ALLOWED_EMAIL) {
+      req.logout(() => {
+        // フロントへリダイレクト時にエラーを伝えるクエリパラメータを付ける
+        const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5500/root';
+        res.redirect(`${frontendURL}?error=unauthorized_email`);
+      });
+      return;
+    }
     res.redirect(process.env.FRONTEND_URL || 'http://localhost:5500/root');
   }
 );

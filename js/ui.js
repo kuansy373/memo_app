@@ -165,8 +165,7 @@ function togglePane() {
 // ----------------------------------------
 
 if (localStorage.getItem('note:' + rootNoteKey) === null) {
-  localStorage.setItem('note:' + rootNoteKey, `
-@alias r ${APP_BASE}root
+  localStorage.setItem('note:' + rootNoteKey, `@alias r ${APP_BASE}root
 @lastPath -
 - [-](r:/デモ)
 - [-](r:/設定)
@@ -487,5 +486,13 @@ window.push = push;
 window.pull = pullCurrentNote;
 
 update();
+
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.get('error') === 'unauthorized_email') {
+  alert('このGoogleアカウントはアクセスが許可されていません。');
+  // クエリパラメータをURLから消す（リロードしても再表示しないように）
+  const cleanURL = location.pathname;
+  history.replaceState(null, '', cleanURL);
+}
 
 checkAuth().then(() => initFromURL());
