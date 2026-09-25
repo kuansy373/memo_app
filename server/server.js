@@ -81,8 +81,13 @@ app.get('/auth/status', (req, res) => {
 // ----------------------------------------
 
 function requireAuth(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: '未ログイン' });
+  if (!req.isAuthenticated()) return res.status(401).json({ error: '未ログイン' });
+
+  if (req.user.emails[0].value !== process.env.ALLOWED_EMAIL) {
+    return res.status(403).json({ error: 'アクセス権限がありません' });
+  }
+
+  next();
 }
 
 // ----------------------------------------
