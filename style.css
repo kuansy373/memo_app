@@ -122,9 +122,12 @@ textarea {
   font-size: 16px;
   color: #1c1c1a;
 }
-#preview h1 { font-size: 22px; font-weight: 600; margin: 0; }
-#preview h2 { font-size: 18px; font-weight: 600; margin: 0.8em 0 0.4em; border-bottom: 1px solid #e2e2df; padding-bottom: 4px; }
-#preview h3 { font-size: 15px; font-weight: 600; margin: 0.6em 0 0.3em; }
+#preview h1 { font-size: 2em; font-weight: 600; }
+#preview h2 { font-size: 1.5em; font-weight: 600; }
+#preview h3 { font-size: 1.17em; font-weight: 600; }
+#preview h4 { font-size: 1em; font-weight: 600; }
+#preview h5 { font-size: 0.83em; font-weight: 600; border-bottom: 1px solid #e2e2df; padding-bottom: 4px;}
+#preview h6 { font-size: 0.67em; font-weight: 600; border-bottom: 1px solid #e2e2df; padding-bottom: 4px;}
 #preview p  { margin: 0.4em 0; }
 #preview strong { font-weight: 600; }
 #preview em { font-style: italic; }
