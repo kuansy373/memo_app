@@ -29,7 +29,11 @@ export function parseCustomMarkdown(text) {
     const codes = [];
 
     s = s.replace(/`(.+?)`/g, (_, code) => {
-      codes.push(`<code>${code}</code>`);
+      const escaped = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      codes.push(`<code>${escaped}</code>`);
       return `\x00${codes.length - 1}\x00`;
     });
 
