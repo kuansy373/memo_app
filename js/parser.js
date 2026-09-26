@@ -226,9 +226,10 @@ export function parseCustomMarkdown(text) {
 
     if (trimmed.startsWith('```')) {
       closeList();
+      const fence = trimmed.match(/^(`+)/)[1];
       i++;
       let code = '';
-      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+      while (i < lines.length && !lines[i].trim().startsWith(fence)) {
         code += lines[i] + '\n';
         i++;
       }
@@ -263,9 +264,10 @@ export function parseCustomMarkdown(text) {
         while (bi < bodyLines.length) {
           const bl = bodyLines[bi];
           if (bl.trim().startsWith('```')) {
+            const fence = bl.trim().match(/^(`+)/)[1];
             bi++;
             let code = '';
-            while (bi < bodyLines.length && !bodyLines[bi].trim().startsWith('```')) {
+            while (bi < bodyLines.length && !bodyLines[bi].trim().startsWith(fence)) {
               code += bodyLines[bi] + '\n';
               bi++;
             }
