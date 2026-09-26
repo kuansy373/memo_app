@@ -251,7 +251,7 @@ export function parseCustomMarkdown(text) {
       }
     }
 
-    if (trimmed.startsWith('> ')) {
+    if (trimmed.startsWith('> ') || trimmed === '>') {
       closeList();
       const calloutMatch = trimmed.match(/^> \[!(\w+)\]([+-])?\s*(.*)/);
       if (calloutMatch) {
@@ -309,8 +309,19 @@ export function parseCustomMarkdown(text) {
         }
         continue;
       }
-      parts.push(`<blockquote>${parseInline(trimmed.slice(2))}</blockquote>`);
-      i++; continue;
+      // 連続する > 行 を一つの blockquote にする
+      const bqLines = [];
+      while (i < lines.length && (lines[i].startsWith('> ') || lines[i].trim() === '>')) {
+        bqLines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+      // 末尾の空行を除去
+      while (bqLines.length > 0 && bqLines[bqLines.length - 1].trim() === '') bqLines.pop();
+      const bqContent = bqLines
+        .map(l => l.trim() === '' ? '' : parseInline(l))
+        .join('<br>');
+      parts.push(`<blockquote>${bqContent}</blockquote>`);
+      continue;
     }
 
     const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s(.*)/);
