@@ -303,19 +303,36 @@ export function parseCustomMarkdown(text) {
     if (listMatch) {
       const depth = Math.floor(listMatch[1].length / 2);
       const type = /\d+\./.test(listMatch[2]) ? 'ol' : 'ul';
+      const num = type === 'ol' ? parseInt(listMatch[2], 10) : null;
       const content = listMatch[3];
 
+      function openList(t, n) {
+        const tag = t === 'ol' ? `<ol start="${n}">` : `<ul>`;
+        parts.push(tag);
+      }
+
       if (!inList) {
-        parts.push(`<${type}>`);
+        openList(type, num);
         inList = [{ type, depth }];
       } else {
         const current = inList[inList.length - 1];
         if (depth > current.depth) {
-          parts.push(`<${type}>`);
+          openList(type, num);
           inList.push({ type, depth });
         } else if (depth < current.depth) {
           while (inList.length > 1 && inList[inList.length - 1].depth > depth) {
             parts.push(`</${inList.pop().type}>`);
+          }
+          if (inList[inList.length - 1].type !== type) {
+            parts.push(`</${inList.pop().type}>`);
+            openList(type, num);
+            inList.push({ type, depth });
+          }
+        } else {
+          if (current.type !== type) {
+            parts.push(`</${inList.pop().type}>`);
+            openList(type, num);
+            inList.push({ type, depth });
           }
         }
       }
