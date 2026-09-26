@@ -209,10 +209,16 @@ code {
    Preview: lists
 ---------------------------------------- */
 
-#preview ul, #preview ol { padding-left: 1.5em; margin: 0.4em 0; }
+#preview ul, #preview ol { padding-left: 1.4em; margin: 0.4em 0; }
 #preview li { margin: 0.1em 0; }
-#preview .list-depth-0 { list-style-type: disc; }
-#preview .list-depth-1 { list-style-type: circle; }
+
+/* ulの点 */
+#preview li.list-depth-0 { list-style: disc; }
+#preview li.list-depth-1 { list-style: circle; }
+
+/* olの数字 — 親がolのときだけ */
+#preview ol > li.list-depth-0 { list-style: decimal; }
+#preview ol > li.list-depth-1 { list-style: decimal; }
 
 /* ----------------------------------------
    Preview: table
