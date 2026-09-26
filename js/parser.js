@@ -28,8 +28,9 @@ export function parseCustomMarkdown(text) {
   function parseInline(s) {
     const codes = [];
 
-    s = s.replace(/`(.+?)`/g, (_, code) => {
-      const escaped = code
+    s = s.replace(/(`{2,})(.+?)\1|`([^`]+)`/gs, (_, fence, code, single) => {
+      const raw = fence ? code.trim() : single;
+      const escaped = raw
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
@@ -225,22 +226,29 @@ export function parseCustomMarkdown(text) {
     }
 
     if (trimmed.startsWith('```')) {
-      closeList();
       const fence = trimmed.match(/^(`+)/)[1];
-      i++;
-      let code = '';
-      while (i < lines.length && !lines[i].trim().startsWith(fence)) {
-        code += lines[i] + '\n';
+      const rest = trimmed.slice(fence.length).trim();
+      const isCodeFence = rest === '' || /^\w+$/.test(rest); // 言語指定のみ or 空
+      const closingIdx = isCodeFence
+        ? lines.slice(i + 1).findIndex(l => l.trim() === fence)
+        : -1;
+      if (isCodeFence && closingIdx !== -1) {
+        closeList();
         i++;
+        let code = '';
+        while (i < lines.length && lines[i].trim() !== fence) {
+          code += lines[i] + '\n';
+          i++;
+        }
+        const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        parts.push(
+          `<div class="code-block-wrapper">` +
+          `<button class="copy-btn" onclick="copyCode(this)" aria-label="コピー">${COPY_ICON}</button>` +
+          `<pre><code>${escaped}</code></pre>` +
+          `</div>`
+        );
+        i++; continue;
       }
-      const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      parts.push(
-        `<div class="code-block-wrapper">` +
-        `<button class="copy-btn" onclick="copyCode(this)" aria-label="コピー">${COPY_ICON}</button>` +
-        `<pre><code>${escaped}</code></pre>` +
-        `</div>`
-      );
-      i++; continue;
     }
 
     if (trimmed.startsWith('> ')) {
