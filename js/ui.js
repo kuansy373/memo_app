@@ -136,9 +136,12 @@ function ensurePreview() {
 }
 
 function togglePane() {
-  // diff モード中はまず edit に戻す
   if (currentMode === 'diff') {
-    exitDiff();
+    exitDiff(); // diff モード中はまず preDiffMode に戻し、
+    currentMode = currentMode === 'edit' ? 'preview' : 'edit'; // その後にトグル
+    document.getElementById('app').className = 'mode-' + currentMode;
+    updateModeLabel();
+    if (currentMode === 'preview') update();
     return;
   }
   const nextMode = currentMode === 'edit' ? 'preview' : 'edit';
