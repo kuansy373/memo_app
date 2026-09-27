@@ -167,9 +167,11 @@ function togglePane() {
 if (localStorage.getItem('note:' + rootNoteKey) === null) {
   localStorage.setItem('note:' + rootNoteKey, `@alias r ${APP_BASE}root
 @lastPath -
-- [-](r:/デモ)
+
+- [Markdown記法の一覧](r:/Markdown記法)
+---
 - [-](r:/設定)
-- [ログイン/ログアウト](r:/form)`
+- [フォーム](r:/form)`
   );
 }
 
@@ -250,7 +252,7 @@ preview.addEventListener('click', e => {
   if (href === loginURL) {
     if (isLoggedIn) {
       e.preventDefault();
-      alert('すでにログイン済みです。アカウントを切り替える場合は一度ログアウトしてください。');
+      alert('すでにログイン済みです。\nアカウントを切り替えるには一度ログアウトしてください。');
     }
   } else if (href === logoutURL) {
     if (!isLoggedIn) {
@@ -489,7 +491,7 @@ update();
 
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('error') === 'unauthorized_email') {
-  alert('このGoogleアカウントはアクセスが許可されていません。');
+  alert('このGoogleアカウントは許可されていないため、ログインできません。');
   // クエリパラメータをURLから消す（リロードしても再表示しないように）
   const cleanURL = location.pathname;
   history.replaceState(null, '', cleanURL);
