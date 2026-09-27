@@ -25,6 +25,7 @@ if (localStorage.getItem('system_root_key') === null) {
 }
 
 let currentMode = 'edit';
+let preDiffMode = 'preview'; // diff に入る直前のモードを記憶（戻り先として使う）
 const baselineMap = new Map(); // path → サーバー確認済みの内容（書き込みは checkCurrentNote / push / pull のみ）
 const pullNotes = new Set();
 
@@ -125,14 +126,21 @@ initNavigation(editor, update, ensurePreview, checkCurrentNote, checkPushStatus)
 
 function updateModeLabel() {
   document.getElementById('mode-label').textContent =
-    currentMode === 'edit' ? '編集中' : 'プレビュー中';
+    currentMode === 'edit' ? '編集中' :
+    currentMode === 'diff' ? '差分確認中' : 'プレビュー中';
 }
 
 function ensurePreview() {
   if (currentMode === 'edit') togglePane();
+  // diff モード中はそのまま維持
 }
 
 function togglePane() {
+  // diff モード中はまず edit に戻す
+  if (currentMode === 'diff') {
+    exitDiff();
+    return;
+  }
   const nextMode = currentMode === 'edit' ? 'preview' : 'edit';
   if (nextMode === 'edit' && pullNotes.has(currentNote)) {
     const answer = confirm('最新の内容がサーバーにあります。pullしますか？\npullしない場合、この端末の現状が最新の内容として扱われます。');
@@ -484,15 +492,128 @@ async function push() {
 }
 
 // ----------------------------------------
-// Diff 表示（スタブ：今後実装）
+// Diff 表示
 // ----------------------------------------
 
-function showPushDiff() {
-  // TODO: ローカル(editor.value) とサーバー(baselineMap) の差分を表示
+// LCS を使った行単位 diff
+// 戻り値: { type: 'same'|'del'|'add', line: string }[]
+function computeLineDiff(oldLines, newLines) {
+  const O = oldLines.length;
+  const N = newLines.length;
+
+  // LCS テーブル
+  const dp = Array.from({ length: O + 1 }, () => new Array(N + 1).fill(0));
+  for (let i = 1; i <= O; i++) {
+    for (let j = 1; j <= N; j++) {
+      dp[i][j] = oldLines[i - 1] === newLines[j - 1]
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+
+  // バックトレース
+  const result = [];
+  let i = O, j = N;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      result.push({ type: 'same', line: oldLines[i - 1] });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      result.push({ type: 'add', line: newLines[j - 1] });
+      j--;
+    } else {
+      result.push({ type: 'del', line: oldLines[i - 1] });
+      i--;
+    }
+  }
+  return result.reverse();
 }
 
-function showPullDiff() {
-  // TODO: サーバー最新内容とローカル(editor.value) の差分を表示
+// diff 結果を HTML に変換
+// del が連続したら連続表示、その後にまとめて add を出す
+function renderDiffHtml(hunks) {
+  let html = '<div class="diff-view">';
+  let i = 0;
+  while (i < hunks.length) {
+    const h = hunks[i];
+    if (h.type === 'same') {
+      html += `<div class="diff-line diff-same">${escLine(h.line)}</div>`;
+      i++;
+    } else if (h.type === 'del') {
+      // del が続く限りまとめる
+      while (i < hunks.length && hunks[i].type === 'del') {
+        html += `<div class="diff-line diff-del">${escLine(hunks[i].line)}</div>`;
+        i++;
+      }
+      // 直後の add をまとめて出す
+      while (i < hunks.length && hunks[i].type === 'add') {
+        html += `<div class="diff-line diff-add">${escLine(hunks[i].line)}</div>`;
+        i++;
+      }
+    } else {
+      // del なしで add だけ（末尾への追加）
+      html += `<div class="diff-line diff-add">${escLine(h.line)}</div>`;
+      i++;
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+function escLine(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;') || '&nbsp;'; // 空行も高さを保つ
+}
+
+// diff モードに入る共通処理
+function enterDiff(oldText, newText) {
+  preDiffMode = currentMode; // 戻り先を記憶（edit / preview）
+  const oldLines = oldText.split('\n');
+  const newLines = newText.split('\n');
+  const hunks = computeLineDiff(oldLines, newLines);
+  preview.innerHTML = renderDiffHtml(hunks);
+  currentMode = 'diff';
+  document.getElementById('app').className = 'mode-diff';
+  updateModeLabel();
+}
+
+// diff モードから抜ける（入る前のモードに戻る）
+function exitDiff() {
+  currentMode = preDiffMode;
+  document.getElementById('app').className = 'mode-' + currentMode;
+  if (currentMode === 'preview') update();
+  updateModeLabel();
+  checkPushStatus();
+}
+
+// push確認: サーバー(赤) → ローカル(緑)
+function showPushDiff() {
+  // トグル: すでに diff 中なら戻る
+  if (currentMode === 'diff') {
+    exitDiff();
+    return;
+  }
+  const local = editor.value;
+  const server = baselineMap.get(currentNote) ?? '';
+  enterDiff(server, local);
+}
+
+// pull確認: ローカル(赤) → サーバー(緑)
+async function showPullDiff() {
+  // トグル: すでに diff 中なら戻る
+  if (currentMode === 'diff') {
+    exitDiff();
+    return;
+  }
+  const local = editor.value;
+  try {
+    const res = await fetch(`${API_BASE}/api/notes${currentNote}`, { credentials: 'include' });
+    if (!res.ok) return;
+    const { content: server } = await res.json();
+    enterDiff(local, server);
+  } catch (e) {}
 }
 
 // ----------------------------------------

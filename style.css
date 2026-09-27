@@ -378,6 +378,28 @@ details.callout > summary.callout-title {
 .callout-body { margin-top: 6px; }
 
 /* ----------------------------------------
+   Diff mode
+---------------------------------------- */
+
+#app.mode-diff #editor  { display: none; }
+#app.mode-diff #preview { display: block; }
+
+.diff-view {
+  font-family: monospace;
+  font-size: 0.9em;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.diff-line {
+  padding: 0 0.5em;
+  min-height: 1.6em;
+}
+/*.diff-same {  変更なし行: スタイルなし  }*/
+.diff-del  { background: #ffd7d5; color: #6e1919; }
+.diff-add  { background: #d4f7d4; color: #1a4d1a; }
+
+/* ----------------------------------------
    @in input
 ---------------------------------------- */
 
