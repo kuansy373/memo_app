@@ -144,6 +144,27 @@ app.delete('/api/notes/*path', requireAuth, async (req, res) => {
   res.json({ path });
 });
 
+// ノートのパス一括リネーム（名前変更時に旧path群→新path群へ UPDATE）
+app.post('/api/notes/rename', requireAuth, async (req, res) => {
+  const { oldPath, newPath } = req.body;
+
+  if (!oldPath || !newPath) {
+    return res.status(400).json({ error: 'oldPath and newPath are required' });
+  }
+
+  // oldPath 自身と、oldPath/ で始まる子ノート全てを対象に UPDATE
+  // 例: /root/old → /root/new, /root/old/child → /root/new/child
+  const result = await pool.query(
+    `UPDATE notes
+     SET path = $2 || substring(path from length($1) + 1),
+         updated_at = NOW()
+     WHERE path = $1 OR path LIKE $3`,
+    [oldPath, newPath, oldPath + '/%']
+  );
+
+  res.json({ ok: true, updated: result.rowCount });
+});
+
 // 全ノート一括取得
 app.get('/api/sync', requireAuth, async (req, res) => {
   const result = await pool.query('SELECT path, content, updated_at FROM notes');

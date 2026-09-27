@@ -1,4 +1,4 @@
-import { APP_BASE } from './constants.js';
+import { APP_BASE, API_BASE } from './constants.js';
 import { storage, getAllNoteKeys } from './storage.js';
 import { parseAliases } from './parser.js';
 
@@ -79,7 +79,7 @@ export function pushBreadcrumbsToURL(crumbs) {
   }
 }
 
-export function renameNote(oldPath) {
+export async function renameNote(oldPath) {
   const lastSlashIndex = oldPath.lastIndexOf('/');
   if (lastSlashIndex === -1) return;
 
@@ -144,6 +144,18 @@ export function renameNote(oldPath) {
   if (oldPath === rootNoteKey) {
     rootNoteKey = newPath;
     localStorage.setItem('system_root_key', newPath);
+  }
+
+  // サーバー側DBも oldPath → newPath に一括リネーム
+  try {
+    await fetch(`${API_BASE}/api/notes/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPath, newPath }),
+      credentials: 'include',
+    });
+  } catch (e) {
+    // オフライン時などは無視（次回 push 時に上書きされる）
   }
 
   switchNote(newPath, { save: false });
