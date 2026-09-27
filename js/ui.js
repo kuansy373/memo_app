@@ -459,6 +459,7 @@ async function checkCurrentNote() {
 
 async function pullCurrentNote() {
   const note = currentNote;
+  const wasDiff = currentMode === 'diff';
   try {
     const res = await fetch(`${API_BASE}/api/notes${note}`, { credentials: 'include' });
     if (!res.ok) return; // 403・401 などはここで止める
@@ -467,7 +468,14 @@ async function pullCurrentNote() {
     baselineMap.set(note, content); // ノートごとにベースラインを更新
     if (note === currentNote) {
       editor.value = content;
-      update();
+      if (wasDiff) {
+        currentMode = 'preview';
+        document.getElementById('app').className = 'mode-preview';
+        update();
+        updateModeLabel();
+      } else {
+        update();
+      }
     }
     pullNotes.delete(note);
     if (note === currentNote) {
@@ -478,6 +486,7 @@ async function pullCurrentNote() {
 
 async function push() {
   const note = currentNote; // push 中に切り替わっても note を固定
+  const wasDiff = currentMode === 'diff';
   const content = storage.get(note);
   await fetch(`${API_BASE}/api/notes${note}`, {
     method: 'PUT',
@@ -487,6 +496,12 @@ async function push() {
   });
   baselineMap.set(note, content); // ノートごとにベースラインを更新
   if (note === currentNote) {
+    if (wasDiff) {
+      currentMode = 'preview';
+      document.getElementById('app').className = 'mode-preview';
+      update();
+      updateModeLabel();
+    }
     checkPushStatus();
   }
 }
