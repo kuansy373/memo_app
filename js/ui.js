@@ -24,7 +24,7 @@ if (localStorage.getItem('system_root_key') === null) {
   localStorage.setItem('system_root_key', `${APP_BASE}root`);
 }
 
-let currentMode = 'edit';
+let currentMode = 'preview';
 let preDiffMode = 'preview'; // diff に入る直前のモードを記憶（戻り先として使う）
 const baselineMap = new Map(); // path → サーバー確認済みの内容（書き込みは checkCurrentNote / push / pull のみ）
 const pullNotes = new Set();
@@ -189,7 +189,7 @@ if (localStorage.getItem('note:' + APP_BASE + 'root/form') === null) {
   );
 }
 
-document.getElementById('app').className = 'mode-edit';
+document.getElementById('app').className = 'mode-preview';
 
 function initFromURL() {
   const fullPath = decodeURIComponent(location.pathname);
