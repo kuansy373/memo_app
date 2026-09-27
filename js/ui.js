@@ -384,22 +384,30 @@ function handleInInput(event) {
 function checkPushStatus() {
   if (pullNotes.has(currentNote)) {
     document.getElementById('pull-btn').style.display = 'inline';
+    document.getElementById('pull-diff-btn').style.display = 'inline';
     document.getElementById('push-btn').style.display = 'none';
+    document.getElementById('push-diff-btn').style.display = 'none';
     return;
   }
   const baseline = baselineMap.get(currentNote);
   if (baseline === undefined) {
     // サーバー未確認のためボタンを出さない（checkCurrentNote の結果を待つ）
     document.getElementById('push-btn').style.display = 'none';
+    document.getElementById('push-diff-btn').style.display = 'none';
+    document.getElementById('pull-diff-btn').style.display = 'none';
     return;
   }
   if (baseline === null || editor.value !== baseline) {
     // null = pull 拒否済み（サーバーと差分あり確定）
     document.getElementById('push-btn').style.display = 'inline';
+    document.getElementById('push-diff-btn').style.display = 'inline';
     document.getElementById('pull-btn').style.display = 'none';
+    document.getElementById('pull-diff-btn').style.display = 'none';
   } else {
     document.getElementById('push-btn').style.display = 'none';
+    document.getElementById('push-diff-btn').style.display = 'none';
     document.getElementById('pull-btn').style.display = 'none';
+    document.getElementById('pull-diff-btn').style.display = 'none';
   }
 }
 
@@ -476,6 +484,18 @@ async function push() {
 }
 
 // ----------------------------------------
+// Diff 表示（スタブ：今後実装）
+// ----------------------------------------
+
+function showPushDiff() {
+  // TODO: ローカル(editor.value) とサーバー(baselineMap) の差分を表示
+}
+
+function showPullDiff() {
+  // TODO: サーバー最新内容とローカル(editor.value) の差分を表示
+}
+
+// ----------------------------------------
 // グローバル公開（HTML の onclick から呼ばれる関数）
 // ----------------------------------------
 
@@ -486,6 +506,8 @@ window.copyCode = copyCode;
 window.handleInInput = handleInInput;
 window.push = push;
 window.pull = pullCurrentNote;
+window.showPushDiff = showPushDiff;
+window.showPullDiff = showPullDiff;
 
 update();
 
