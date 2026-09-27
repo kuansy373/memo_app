@@ -256,7 +256,9 @@ export function parseCustomMarkdown(text) {
       const calloutMatch = trimmed.match(/^> \[!(\w+)\]([+-])?\s*(.*)/);
       if (calloutMatch) {
         const type = calloutMatch[1].toLowerCase();
-        const foldable = calloutMatch[2] === '-';
+        const foldSymbol = calloutMatch[2];
+        const foldable = foldSymbol === '+' || foldSymbol === '-';
+        const defaultOpen = foldSymbol === '+';
         const title = calloutMatch[3] || type;
         const color = parseCalloutColor(type);
         i++;
@@ -293,8 +295,9 @@ export function parseCustomMarkdown(text) {
         }
         const innerHtml = `<div class="callout-body">${body}</div>`;
         if (foldable) {
+          const openAttr = defaultOpen ? ' open' : '';
           parts.push(
-            `<details class="callout" style="border-color:${color};">` +
+            `<details class="callout"${openAttr} style="border-color:${color};">` +
             `<summary class="callout-title" style="color:${color};">${title}</summary>` +
             innerHtml +
             `</details>`
