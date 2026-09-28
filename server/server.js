@@ -126,10 +126,14 @@ app.get('/api/notes/*path', requireAuth, async (req, res) => {
   res.json({ path, content: result.rows[0].content });
 });
 
-// ノート保存
+// ノート保存（空コンテンツの場合は削除扱い）
 app.put('/api/notes/*path', requireAuth, async (req, res) => {
   const path = '/' + req.params['path'].join('/');
   const { content } = req.body;
+  if (content === '' || content == null) {
+    await pool.query('DELETE FROM notes WHERE path = $1', [path]);
+    return res.json({ path, deleted: true });
+  }
   await pool.query(
     'INSERT INTO notes (path, content) VALUES ($1, $2) ON CONFLICT (path) DO UPDATE SET content = $2, updated_at = NOW()',
     [path, content]
