@@ -626,11 +626,22 @@ function showPushDiff() {
   enterDiff(server, local);
 }
 
+// pullしない: pullNotes から除外してdiffモードのまま維持
+function cancelPull() {
+  pullNotes.delete(currentNote);
+  document.getElementById('cancel-pull-btn').style.display = 'none';
+  const local = editor.value;
+  const hunks = computeLineDiff(local.split('\n'), local.split('\n'));
+  preview.innerHTML = renderDiffHtml(hunks);
+  checkPushStatus();
+}
+
 // pull確認: ローカル(赤) → サーバー(緑)
 async function showPullDiff() {
   // トグル: すでに diff 中なら戻る
   if (currentMode === 'diff') {
     exitDiff();
+    document.getElementById('cancel-pull-btn').style.display = 'none';
     return;
   }
   const local = editor.value;
@@ -639,6 +650,7 @@ async function showPullDiff() {
     if (!res.ok) return;
     const { content: server } = await res.json();
     enterDiff(local, server);
+    document.getElementById('cancel-pull-btn').style.display = 'inline';
   } catch (e) {}
 }
 
@@ -655,6 +667,7 @@ window.push = push;
 window.pull = pullCurrentNote;
 window.showPushDiff = showPushDiff;
 window.showPullDiff = showPullDiff;
+window.cancelPull = cancelPull;
 
 update();
 
