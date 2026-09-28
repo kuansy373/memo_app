@@ -498,7 +498,7 @@ async function pullCurrentNote() {
 async function push() {
   const note = currentNote; // push 中に切り替わっても note を固定
   const wasDiff = currentMode === 'diff';
-  const content = storage.get(note);
+  const content = storage.get(note) ?? '';
   await fetch(`${API_BASE}/api/notes${note}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
