@@ -200,7 +200,7 @@ function initFromURL() {
   const path = (fullPath.startsWith(APP_BASE) && !isBase)
     ? fullPath
     : rootNoteKey;
-  switchNote(path, { save: false });
+  switchNote(path);
 }
 
 // ----------------------------------------

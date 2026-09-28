@@ -35,16 +35,8 @@ export function parsePathToCrumbs(fullPath) {
   });
 }
 
-export function switchNote(path, { save = true } = {}) {
+export function switchNote(path) {
   const fullPath = path.startsWith(APP_BASE) ? path : `${APP_BASE}${path}`;
-
-  if (save) {
-    if (_editor.value === '') {
-      storage.remove(currentNote);
-    } else {
-      storage.set(currentNote, _editor.value);
-    }
-  }
 
   currentNote = fullPath;
   breadcrumbs = parsePathToCrumbs(fullPath);
@@ -164,5 +156,5 @@ export async function renameNote(oldPath) {
     // オフライン時などは無視（次回 push 時に上書きされる）
   }
 
-  switchNote(newPath, { save: false });
+  switchNote(newPath);
 }
