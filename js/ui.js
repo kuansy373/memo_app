@@ -218,7 +218,11 @@ window.addEventListener('popstate', () => {
 // ----------------------------------------
 
 editor.addEventListener('input', () => {
-  storage.set(currentNote, editor.value);
+  if (editor.value === '') {
+    storage.remove(currentNote);
+  } else {
+    storage.set(currentNote, editor.value);
+  }
   update();
 });
 
@@ -237,7 +241,11 @@ editor.addEventListener('paste', e => {
   const end = editor.selectionEnd;
   editor.value = editor.value.slice(0, start) + decoded + editor.value.slice(end);
   editor.selectionStart = editor.selectionEnd = start + decoded.length;
-  storage.set(currentNote, editor.value);
+  if (editor.value === '') {
+    storage.remove(currentNote);
+  } else {
+    storage.set(currentNote, editor.value);
+  }
   update();
 });
 

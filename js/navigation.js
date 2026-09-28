@@ -38,7 +38,13 @@ export function parsePathToCrumbs(fullPath) {
 export function switchNote(path, { save = true } = {}) {
   const fullPath = path.startsWith(APP_BASE) ? path : `${APP_BASE}${path}`;
 
-  if (save) storage.set(currentNote, _editor.value);
+  if (save) {
+    if (_editor.value === '') {
+      storage.remove(currentNote);
+    } else {
+      storage.set(currentNote, _editor.value);
+    }
+  }
 
   currentNote = fullPath;
   breadcrumbs = parsePathToCrumbs(fullPath);
