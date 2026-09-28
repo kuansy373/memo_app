@@ -144,24 +144,17 @@ function togglePane() {
     if (currentMode === 'preview') update();
     return;
   }
+
   const nextMode = currentMode === 'edit' ? 'preview' : 'edit';
   if (nextMode === 'edit' && pullNotes.has(currentNote)) {
-    const answer = confirm('最新の内容がサーバーにあります。pullしますか？\npullしない場合、この端末の現状が最新の内容として扱われます。');
-    if (answer) {
-      pullCurrentNote();
-      return;
-    } else {
-      pullNotes.delete(currentNote);
-      baselineMap.set(currentNote, null); // サーバー内容不明・push が必要な状態
-      document.getElementById('pull-btn').style.display = 'none';
-    }
+    return;
   }
-  currentMode = currentMode === 'edit' ? 'preview' : 'edit';
+  currentMode = nextMode;
   document.getElementById('app').className = 'mode-' + currentMode;
   updateModeLabel();
 
   document.querySelectorAll('.btn-icon').forEach(icon => {
-    icon.classList.toggle('btn-icon--pen',  currentMode === 'preview');
+    icon.classList.toggle('btn-icon--pen', currentMode === 'preview');
     icon.classList.toggle('btn-icon--book', currentMode === 'edit');
     icon.alt = currentMode === 'edit' ? 'プレビュー' : '編集';
   });
@@ -401,21 +394,28 @@ function handleInInput(event) {
 // ----------------------------------------
 
 function checkPushStatus() {
+  const toggleBtn = document.querySelector('.btn-toggle');
   if (pullNotes.has(currentNote)) {
+    toggleBtn.style.display = 'none';
     document.getElementById('pull-btn').style.display = 'inline';
     document.getElementById('pull-diff-btn').style.display = 'inline';
     document.getElementById('push-btn').style.display = 'none';
     document.getElementById('push-diff-btn').style.display = 'none';
     return;
   }
+
   const baseline = baselineMap.get(currentNote);
   if (baseline === undefined) {
-    // サーバー未確認のためボタンを出さない（checkCurrentNote の結果を待つ）
+    toggleBtn.style.display = 'none';
     document.getElementById('push-btn').style.display = 'none';
     document.getElementById('push-diff-btn').style.display = 'none';
     document.getElementById('pull-diff-btn').style.display = 'none';
     return;
   }
+
+  // pullの非表示が確定してから表示
+  toggleBtn.style.display = 'inline';
+
   if (baseline === null || editor.value !== baseline) {
     // null = pull 拒否済み（サーバーと差分あり確定）
     document.getElementById('push-btn').style.display = 'inline';
