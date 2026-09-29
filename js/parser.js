@@ -303,9 +303,15 @@ export function parseCustomMarkdown(text) {
       }
       // 末尾の空行を除去
       while (bqLines.length > 0 && bqLines[bqLines.length - 1].trim() === '') bqLines.pop();
-      const bqContent = bqLines
-        .map(l => l.trim() === '' ? '' : parseInline(l))
-        .join('<br>');
+      const hasNestedQuote = bqLines.some(l => l.startsWith('> ') || l.trim() === '>');
+      let bqContent;
+      if (hasNestedQuote) {
+        bqContent = parseCustomMarkdown(bqLines.join('\n'));
+      } else {
+        bqContent = bqLines
+          .map(l => l.trim() === '' ? '' : `<p>${parseInline(l)}</p>`)
+          .join('');
+      }
       parts.push(`<blockquote>${bqContent}</blockquote>`);
       continue;
     }
