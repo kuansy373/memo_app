@@ -478,6 +478,7 @@ async function pullCurrentNote() {
     storage.set(note, content);
     baselineMap.set(note, content); // ノートごとにベースラインを更新
     if (note === currentNote) {
+      document.getElementById('cancel-pull-btn').style.display = 'none';
       editor.value = content;
       if (wasDiff) {
         currentMode = 'preview';
