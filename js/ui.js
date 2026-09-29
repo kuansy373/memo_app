@@ -257,15 +257,14 @@ editor.addEventListener('paste', e => {
 });
 
 preview.addEventListener('click', e => {
-  // スマホ: コードブロックのタップでコピーボタン表示トグル
-  const wrapper = e.target.closest('.code-block-wrapper');
+  const path = e.composedPath();
+  const wrapper = path.find(el => el.classList?.contains('code-block-wrapper'));
+  const onCopyBtn = path.some(el => el.classList?.contains('copy-btn'));
   if (!wrapper) {
     document.querySelectorAll('.code-block-wrapper.touch-active')
       .forEach(el => el.classList.remove('touch-active'));
-  } else {
-    if (!e.target.closest('.copy-btn')) {
-      wrapper.classList.toggle('touch-active');
-    }
+  } else if (!onCopyBtn) {
+    wrapper.classList.toggle('touch-active');
   }
 
   // ログイン/ログアウトリンクのインターセプト
