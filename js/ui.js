@@ -429,8 +429,7 @@ function checkPushStatus() {
   // pullの非表示が確定してから表示
   toggleBtn.style.display = 'inline';
 
-  // null = pull 拒否済み（サーバーと差分あり確定）
-  const needsPush = lastSynced === null || editor.value !== lastSynced;
+  const needsPush = editor.value !== lastSynced;
   setVisible('push-btn', needsPush);
   setVisible('push-diff-btn', needsPush);
   setVisible('pull-btn', false);
@@ -445,8 +444,8 @@ async function checkCurrentNote() {
     checkPushStatus();
     return;
   }
-  if (lastSyncedMap.has(note) && lastSyncedMap.get(note) !== null) {
-    // サーバー確認済み・pull拒否済みでない場合はローカルと最後の同期内容の比較だけ行う
+  if (lastSyncedMap.has(note)) {
+    // サーバー確認済みの場合はローカルと最後の同期内容の比較だけ行う
     checkPushStatus();
     return;
   }
