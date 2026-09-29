@@ -26,7 +26,7 @@ if (localStorage.getItem('system_root_key') === null) {
 
 let currentMode = 'preview';
 let preDiffMode = 'preview'; // diff に入る直前のモードを記憶（戻り先として使う）
-const baselineMap = new Map(); // path → サーバー確認済みの内容（書き込みは checkCurrentNote / push / pull のみ）
+const lastSyncedMap = new Map(); // path → サーバー確認済みの内容（書き込みは checkCurrentNote / push / pull のみ）
 const pullNotes = new Set();
 
 // ----------------------------------------
@@ -417,12 +417,12 @@ function checkPushStatus() {
     return;
   }
 
-  const baseline = baselineMap.get(currentNote);
-  if (baseline === undefined) {
+  const lastSynced = lastSyncedMap.get(currentNote);
+  if (lastSynced === undefined) {
     toggleBtn.style.display = 'none';
     setVisible('push-btn', false);
     setVisible('push-diff-btn', false);
-    setVisible('pull-diff-btn', false); // pull-btn はここでは触らない
+    setVisible('pull-diff-btn', false); // pull-btn は pullNotes の分岐でのみ表示されるため、ここでは操作しない
     return;
   }
 
@@ -430,7 +430,7 @@ function checkPushStatus() {
   toggleBtn.style.display = 'inline';
 
   // null = pull 拒否済み（サーバーと差分あり確定）
-  const needsPush = baseline === null || editor.value !== baseline;
+  const needsPush = lastSynced === null || editor.value !== lastSynced;
   setVisible('push-btn', needsPush);
   setVisible('push-diff-btn', needsPush);
   setVisible('pull-btn', false);
@@ -445,8 +445,8 @@ async function checkCurrentNote() {
     checkPushStatus();
     return;
   }
-  if (baselineMap.has(note) && baselineMap.get(note) !== null) {
-    // サーバー確認済み・pull拒否済みでない場合はローカルとベースラインの比較だけ行う
+  if (lastSyncedMap.has(note) && lastSyncedMap.get(note) !== null) {
+    // サーバー確認済み・pull拒否済みでない場合はローカルと最後の同期内容の比較だけ行う
     checkPushStatus();
     return;
   }
@@ -459,14 +459,14 @@ async function checkCurrentNote() {
     if (note !== currentNote) return;
     if (!res.ok && res.status !== 404) return; // 404以外のエラーは無視
     if (res.status === 404) {
-      // サーバーに存在しない → 空をベースラインとして push を促す
-      baselineMap.set(note, '');
+      // サーバーに存在しない → 空を最後の同期内容として push を促す
+      lastSyncedMap.set(note, '');
       checkPushStatus();
       return;
     }
 
     const { content: serverContent } = await res.json();
-    baselineMap.set(note, serverContent); // ノートごとにベースラインを記録
+    lastSyncedMap.set(note, serverContent); // ノートごとに最後の同期内容を記録
 
     if (serverContent !== localContent) {
       pullNotes.add(note);
@@ -483,7 +483,7 @@ async function pullCurrentNote() {
     if (!res.ok) return; // 403・401 などはここで止める
     const { content } = await res.json();
     storage.set(note, content);
-    baselineMap.set(note, content); // ノートごとにベースラインを更新
+    lastSyncedMap.set(note, content); // ノートごとに最後の同期内容を更新
     if (note === currentNote) {
       setVisible('cancel-pull-btn', false);
       editor.value = content;
@@ -513,7 +513,7 @@ async function push() {
     body: JSON.stringify({ content }),
     credentials: 'include'
   });
-  baselineMap.set(note, content); // ノートごとにベースラインを更新
+  lastSyncedMap.set(note, content); // ノートごとに最後の同期内容を更新
   if (note === currentNote) {
     if (wasDiff) {
       currentMode = 'preview';
@@ -630,7 +630,7 @@ function showPushDiff() {
     return;
   }
   const local = editor.value;
-  const server = baselineMap.get(currentNote) ?? '';
+  const server = lastSyncedMap.get(currentNote) ?? '';
   enterDiff(server, local);
 }
 
