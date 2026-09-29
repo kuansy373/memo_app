@@ -121,6 +121,27 @@ function update() {
 initNavigation(editor, update, ensurePreview, checkCurrentNote, checkPushStatus);
 
 // ----------------------------------------
+// ヘルパー
+// ----------------------------------------
+
+function setVisible(id, visible) {
+  document.getElementById(id).style.display = visible ? 'inline' : 'none';
+}
+
+function applyModeClass() {
+  document.getElementById('app').className = 'mode-' + currentMode;
+}
+
+// editor の内容を現在のノートに保存する（空なら削除）
+function saveCurrentNote() {
+  if (editor.value === '') {
+    storage.remove(currentNote);
+  } else {
+    storage.set(currentNote, editor.value);
+  }
+}
+
+// ----------------------------------------
 // Mode toggle
 // ----------------------------------------
 
@@ -139,7 +160,7 @@ function togglePane() {
   if (currentMode === 'diff') {
     exitDiff(); // diff モード中はまず preDiffMode に戻し、
     currentMode = currentMode === 'edit' ? 'preview' : 'edit'; // その後にトグル
-    document.getElementById('app').className = 'mode-' + currentMode;
+    applyModeClass();
     updateModeLabel();
     if (currentMode === 'preview') update();
     return;
@@ -150,7 +171,7 @@ function togglePane() {
     return;
   }
   currentMode = nextMode;
-  document.getElementById('app').className = 'mode-' + currentMode;
+  applyModeClass();
   updateModeLabel();
 
   document.querySelectorAll('.btn-icon').forEach(icon => {
@@ -211,11 +232,7 @@ window.addEventListener('popstate', () => {
 // ----------------------------------------
 
 editor.addEventListener('input', () => {
-  if (editor.value === '') {
-    storage.remove(currentNote);
-  } else {
-    storage.set(currentNote, editor.value);
-  }
+  saveCurrentNote();
   update();
 });
 
@@ -234,11 +251,7 @@ editor.addEventListener('paste', e => {
   const end = editor.selectionEnd;
   editor.value = editor.value.slice(0, start) + decoded + editor.value.slice(end);
   editor.selectionStart = editor.selectionEnd = start + decoded.length;
-  if (editor.value === '') {
-    storage.remove(currentNote);
-  } else {
-    storage.set(currentNote, editor.value);
-  }
+  saveCurrentNote();
   update();
 });
 
@@ -397,37 +410,31 @@ function checkPushStatus() {
   const toggleBtn = document.querySelector('.btn-toggle');
   if (pullNotes.has(currentNote)) {
     toggleBtn.style.display = 'none';
-    document.getElementById('pull-btn').style.display = 'inline';
-    document.getElementById('pull-diff-btn').style.display = 'inline';
-    document.getElementById('push-btn').style.display = 'none';
-    document.getElementById('push-diff-btn').style.display = 'none';
+    setVisible('pull-btn', true);
+    setVisible('pull-diff-btn', true);
+    setVisible('push-btn', false);
+    setVisible('push-diff-btn', false);
     return;
   }
 
   const baseline = baselineMap.get(currentNote);
   if (baseline === undefined) {
     toggleBtn.style.display = 'none';
-    document.getElementById('push-btn').style.display = 'none';
-    document.getElementById('push-diff-btn').style.display = 'none';
-    document.getElementById('pull-diff-btn').style.display = 'none';
+    setVisible('push-btn', false);
+    setVisible('push-diff-btn', false);
+    setVisible('pull-diff-btn', false); // pull-btn はここでは触らない
     return;
   }
 
   // pullの非表示が確定してから表示
   toggleBtn.style.display = 'inline';
 
-  if (baseline === null || editor.value !== baseline) {
-    // null = pull 拒否済み（サーバーと差分あり確定）
-    document.getElementById('push-btn').style.display = 'inline';
-    document.getElementById('push-diff-btn').style.display = 'inline';
-    document.getElementById('pull-btn').style.display = 'none';
-    document.getElementById('pull-diff-btn').style.display = 'none';
-  } else {
-    document.getElementById('push-btn').style.display = 'none';
-    document.getElementById('push-diff-btn').style.display = 'none';
-    document.getElementById('pull-btn').style.display = 'none';
-    document.getElementById('pull-diff-btn').style.display = 'none';
-  }
+  // null = pull 拒否済み（サーバーと差分あり確定）
+  const needsPush = baseline === null || editor.value !== baseline;
+  setVisible('push-btn', needsPush);
+  setVisible('push-diff-btn', needsPush);
+  setVisible('pull-btn', false);
+  setVisible('pull-diff-btn', false);
 }
 
 async function checkCurrentNote() {
@@ -478,11 +485,11 @@ async function pullCurrentNote() {
     storage.set(note, content);
     baselineMap.set(note, content); // ノートごとにベースラインを更新
     if (note === currentNote) {
-      document.getElementById('cancel-pull-btn').style.display = 'none';
+      setVisible('cancel-pull-btn', false);
       editor.value = content;
       if (wasDiff) {
         currentMode = 'preview';
-        document.getElementById('app').className = 'mode-preview';
+        applyModeClass();
         update();
         updateModeLabel();
       } else {
@@ -510,7 +517,7 @@ async function push() {
   if (note === currentNote) {
     if (wasDiff) {
       currentMode = 'preview';
-      document.getElementById('app').className = 'mode-preview';
+      applyModeClass();
       update();
       updateModeLabel();
     }
@@ -602,14 +609,14 @@ function enterDiff(oldText, newText) {
   const hunks = computeLineDiff(oldLines, newLines);
   preview.innerHTML = renderDiffHtml(hunks);
   currentMode = 'diff';
-  document.getElementById('app').className = 'mode-diff';
+  applyModeClass();
   updateModeLabel();
 }
 
 // diff モードから抜ける（入る前のモードに戻る）
 function exitDiff() {
   currentMode = preDiffMode;
-  document.getElementById('app').className = 'mode-' + currentMode;
+  applyModeClass();
   if (currentMode === 'preview') update();
   updateModeLabel();
   checkPushStatus();
@@ -630,7 +637,7 @@ function showPushDiff() {
 // pullしない: pullNotes から除外してdiffモードのまま維持
 function cancelPull() {
   pullNotes.delete(currentNote);
-  document.getElementById('cancel-pull-btn').style.display = 'none';
+  setVisible('cancel-pull-btn', false);
   const local = editor.value;
   const hunks = computeLineDiff(local.split('\n'), local.split('\n'));
   preview.innerHTML = renderDiffHtml(hunks);
@@ -642,7 +649,7 @@ async function showPullDiff() {
   // トグル: すでに diff 中なら戻る
   if (currentMode === 'diff') {
     exitDiff();
-    document.getElementById('cancel-pull-btn').style.display = 'none';
+    setVisible('cancel-pull-btn', false);
     return;
   }
   const local = editor.value;
@@ -651,7 +658,7 @@ async function showPullDiff() {
     if (!res.ok) return;
     const { content: server } = await res.json();
     enterDiff(local, server);
-    document.getElementById('cancel-pull-btn').style.display = 'inline';
+    setVisible('cancel-pull-btn', true);
   } catch (e) {}
 }
 
