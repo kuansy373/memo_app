@@ -1,5 +1,6 @@
 import { APP_BASE } from './constants.js';
-import { LINK_ICON, COPY_ICON } from './svg.js';
+import { LINK_ICON } from './svg.js';
+import { escapeHtml, renderCodeBlock } from './utils.js';
 
 export function parseAliases(text) {
   const aliases = {};
@@ -30,11 +31,7 @@ export function parseCustomMarkdown(text) {
 
     s = s.replace(/(`{2,})(.+?)\1|`([^`]+)`/gs, (_, fence, code, single) => {
       const raw = fence ? code.trim() : single;
-      const escaped = raw
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      codes.push(`<code>${escaped}</code>`);
+      codes.push(`<code>${escapeHtml(raw)}</code>`);
       return `\x00${codes.length - 1}\x00`;
     });
 
@@ -240,13 +237,7 @@ export function parseCustomMarkdown(text) {
           code += lines[i] + '\n';
           i++;
         }
-        const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        parts.push(
-          `<div class="code-block-wrapper">` +
-          `<button class="copy-btn" onclick="copyCode(this)" aria-label="コピー">${COPY_ICON}</button>` +
-          `<pre><code>${escaped}</code></pre>` +
-          `</div>`
-        );
+        parts.push(renderCodeBlock(code));
         i++; continue;
       }
     }
@@ -281,12 +272,7 @@ export function parseCustomMarkdown(text) {
               code += bodyLines[bi] + '\n';
               bi++;
             }
-            const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            body +=
-              `<div class="code-block-wrapper">` +
-              `<button class="copy-btn" onclick="copyCode(this)" aria-label="コピー">${COPY_ICON}</button>` +
-              `<pre><code>${escaped}</code></pre>` +
-              `</div>`;
+            body += renderCodeBlock(code);
             bi++; continue;
           }
           if (bl.trim() === '') { bi++; continue; }

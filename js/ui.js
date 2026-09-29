@@ -2,6 +2,7 @@ import { APP_BASE, API_BASE } from './constants.js';
 import { COPY_ICON } from './svg.js';
 import { storage, getAllNoteKeys } from './storage.js';
 import { parseCustomMarkdown } from './parser.js';
+import { escapeHtml } from './utils.js';
 import {
   rootNoteKey, currentNote, breadcrumbs,
   initNavigation, parsePathToCrumbs,
@@ -255,8 +256,8 @@ editor.addEventListener('paste', e => {
   update();
 });
 
-// スマホ: コードブロックのタップでコピーボタン表示トグル
 preview.addEventListener('click', e => {
+  // スマホ: コードブロックのタップでコピーボタン表示トグル
   const wrapper = e.target.closest('.code-block-wrapper');
   if (!wrapper) {
     document.querySelectorAll('.code-block-wrapper.touch-active')
@@ -594,10 +595,7 @@ function renderDiffHtml(hunks) {
 }
 
 function escLine(text) {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;') || '&nbsp;'; // 空行も高さを保つ
+  return escapeHtml(text) || '&nbsp;'; // 空行も高さを保つ
 }
 
 // diff モードに入る共通処理
