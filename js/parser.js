@@ -1,6 +1,6 @@
 import { APP_BASE } from './constants.js';
 import { LINK_ICON } from './svg.js';
-import { escapeHtml, renderCodeBlock } from './utils.js';
+import { escapeHtml, escapeAttr, renderCodeBlock } from './utils.js';
 
 export function parseAliases(text) {
   const aliases = {};
@@ -56,7 +56,7 @@ export function parseCustomMarkdown(text) {
           if (lastPathPlaceholder && text === lastPathPlaceholder) {
             label = rawPath.split('/').filter(Boolean).pop() || rawPath;
           }
-          return `<a href="#" onclick="switchNote('${rawPath}'); return false;">${label || rawPath}</a>`;
+          return `<a href="#" data-note-path="${escapeAttr(rawPath)}">${label || rawPath}</a>`;
         }
 
         if (!/^https?:\/\//.test(url)) {
@@ -64,7 +64,7 @@ export function parseCustomMarkdown(text) {
         }
 
         const label = text ? `${text}${LINK_ICON}` : LINK_ICON;
-        return `<a href="${url}" target="_blank">${label}</a>`;
+        return `<a href="${escapeAttr(url)}" target="_blank">${label}</a>`;
       });
 
     s = s.replace(/~~(.+?)~~/gs, '<s>$1</s>');
@@ -132,17 +132,14 @@ export function parseCustomMarkdown(text) {
         const ruleMatches = [...ruleStr.matchAll(/"((?:[^"\\]|\\.)*)"->"((?:[^"\\]|\\.)*)"/g)];
         replaceRules = ruleMatches.map(m => [m[1], m[2]]);
       }
-      const replaceJson = JSON.stringify(replaceRules)
-        .replace(/\\/g, '\\\\')
-        .replace(/'/g, '&#39;');
-      const sepsJson = JSON.stringify(seps).replace(/'/g, '&#39;');
+      const replaceJson = JSON.stringify(replaceRules).replace(/\\/g, '\\\\');
+      const sepsJson = JSON.stringify(seps);
       parts.push(
-        `<input type="text" placeholder="${placeholder}" ` +
-        `data-vars='${varNames.map(v => v.replace(/'/g, '&#39;')).join('\t')}' ` +
-        `data-seps='${sepsJson}' ` +
-        `data-replace='${replaceJson}' ` +
-        `class="in-input" ` +
-        `onkeydown="handleInInput(event)">`
+        `<input type="text" placeholder="${escapeAttr(placeholder)}" ` +
+        `data-vars="${escapeAttr(varNames.join('\t'))}" ` +
+        `data-seps="${escapeAttr(sepsJson)}" ` +
+        `data-replace="${escapeAttr(replaceJson)}" ` +
+        `class="in-input">`
       );
       i++; continue;
     }

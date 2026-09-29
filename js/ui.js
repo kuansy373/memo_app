@@ -60,6 +60,7 @@ function update() {
     });
 
     // masks-cell 内のリンク・画像クリックを行トグルに伝播
+    // ※ 行リスナーとの組み合わせ（バブリングによる重複を含む）は CSS と合わせて意図した挙動。変更しないこと。
     row.querySelectorAll('.masks-cell a, .masks-cell a img').forEach(el => {
       el.addEventListener('click', () => {
         row.classList.toggle('revealed');
@@ -257,19 +258,33 @@ editor.addEventListener('paste', e => {
 });
 
 preview.addEventListener('click', e => {
-  const path = e.composedPath();
-  const wrapper = path.find(el => el.classList?.contains('code-block-wrapper'));
-  const onCopyBtn = path.some(el => el.classList?.contains('copy-btn'));
+  // 注意: copyCode はボタンの中身（innerHTML）を差し替えて e.target を DOM から外す。
+  // e.target からの closest() は、副作用のある処理を呼ぶ前にすべて済ませておくこと。
+  const copyBtn = e.target.closest('[data-action="copy"]');
+  const wrapper = e.target.closest('.code-block-wrapper');
+  const link = e.target.closest('a');
+
+  // コピーボタン
+  if (copyBtn) copyCode(copyBtn);
+
+  // スマホ: コードブロックのタップでコピーボタン表示トグル（コピーボタン自体のタップは除く）
   if (!wrapper) {
     document.querySelectorAll('.code-block-wrapper.touch-active')
       .forEach(el => el.classList.remove('touch-active'));
-  } else if (!onCopyBtn) {
+  } else if (!copyBtn) {
     wrapper.classList.toggle('touch-active');
   }
 
-  // ログイン/ログアウトリンクのインターセプト
-  const link = e.target.closest('a');
   if (!link) return;
+
+  // アプリ内ノートへのリンク
+  if (link.dataset.notePath !== undefined) {
+    e.preventDefault();
+    switchNote(link.dataset.notePath);
+    return;
+  }
+
+  // ログイン/ログアウトリンクのインターセプト
   const href = link.getAttribute('href') || '';
   const loginURL = `${API_BASE}/auth/google`;
   const logoutURL = `${API_BASE}/auth/logout`;
@@ -285,6 +300,11 @@ preview.addEventListener('click', e => {
       alert('ログインしていないため、ログアウトできません。');
     }
   }
+});
+
+// @in の入力欄: Enter で @out の定義に従って本文へ反映
+preview.addEventListener('keydown', e => {
+  if (e.target.matches('.in-input')) handleInInput(e);
 });
 
 // ----------------------------------------
@@ -592,8 +612,6 @@ async function showPullDiff() {
 window.switchNote = switchNote;
 window.navigateToIndex = navigateToIndex;
 window.togglePane = togglePane;
-window.copyCode = copyCode;
-window.handleInInput = handleInInput;
 window.push = push;
 window.pull = pullCurrentNote;
 window.showPushDiff = showPushDiff;
