@@ -117,7 +117,8 @@ textarea {
 
 #preview {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
+  white-space: pre;
   padding: 16px 20px 20vh 20px;
   font-size: 16px;
   color: #1c1c1a;
@@ -160,6 +161,7 @@ code {
   border-radius: 6px;
   padding: 10px;
   overflow-x: auto;
+  overscroll-behavior-x: none;
   margin: 0.6em 0;
   scrollbar-width: thin;
 }
@@ -235,11 +237,11 @@ code {
 #preview td {
   border: 1px solid #ddd;
   padding: 6px 10px;
+  white-space: pre;
 }
 #preview th {
   background: #f5f5f4;
   font-weight: 500;
-  white-space: nowrap;
 }
 
 /* 交互に濃淡 */
@@ -315,7 +317,6 @@ code {
   min-width: 6px;
   max-width: 6px;
   overflow: hidden;
-  white-space: nowrap;
   padding: 0 !important;
   color: transparent;
   background: #ccc;
@@ -327,7 +328,8 @@ code {
   pointer-events: none;
   color: transparent;
 }
-#preview .hide-col a svg { display: none; }
+#preview .hide-col a svg,
+#preview .hide-col br { display: none; }
 #preview .hide-col code {
   color: transparent;
   background: transparent;
@@ -343,12 +345,12 @@ code {
   min-width: 0;
   max-width: none;
   overflow: visible;
-  white-space: normal;
   padding: 6px 10px !important;
   background: inherit;
   cursor: default;
   border: 1px solid #ddd;
 }
+#preview .hide-col.revealed br { display: inline; }
 #preview th.hide-col.revealed { color: #1c1c1a; }
 #preview .hide-col.revealed:not(.masks-cell) { color: inherit; }
 #preview .hide-col.revealed:not(.masks-cell) a {
