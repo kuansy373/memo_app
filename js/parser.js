@@ -272,7 +272,13 @@ export function parseCustomMarkdown(text) {
             body += renderCodeBlock(code);
             bi++; continue;
           }
-          if (bl.trim() === '') { bi++; continue; }
+          if (bl.trim() === '') {
+            const next = bodyLines[bi + 1];
+            if (body !== '' && next && next.trim() !== '') {
+              body += '<br>';
+            }
+            bi++; continue;
+          }
           body += '<p>' + parseInline(bl) + '</p>';
           bi++;
         }
@@ -309,7 +315,15 @@ export function parseCustomMarkdown(text) {
         bqContent = parseCustomMarkdown(bqLines.join('\n'));
       } else {
         bqContent = bqLines
-          .map(l => l.trim() === '' ? '' : `<p>${parseInline(l)}</p>`)
+          .map((l, idx, arr) => {
+            if (l.trim() === '') {
+              const prev = arr[idx - 1];
+              const next = arr[idx + 1];
+              if (prev && prev.trim() !== '' && next && next.trim() !== '') return '<br>';
+              return '';
+            }
+            return `<p>${parseInline(l)}</p>`;
+          })
           .join('');
       }
       parts.push(`<blockquote>${bqContent}</blockquote>`);
