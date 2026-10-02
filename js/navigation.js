@@ -45,6 +45,7 @@ export function switchNote(path) {
   updateBreadcrumbs();
   _update();
   _ensurePreview();
+  _checkPushStatus();
   _checkCurrentNote();
 }
 
