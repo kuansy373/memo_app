@@ -428,6 +428,16 @@ function handleInInput(event) {
 
 function checkPushStatus() {
   const toggleBtn = document.querySelector('.btn-toggle');
+
+  if (!isLoggedIn) {
+    toggleBtn.style.display = 'inline';
+    setVisible('push-btn', false);
+    setVisible('push-diff-btn', false);
+    setVisible('pull-btn', false);
+    setVisible('pull-diff-btn', false);
+    return;
+  }
+
   if (pullNotes.has(currentNote)) {
     toggleBtn.style.display = 'none';
     setVisible('pull-btn', true);
