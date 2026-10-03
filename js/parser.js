@@ -312,7 +312,32 @@ export function parseCustomMarkdown(text) {
       const hasNestedQuote = bqLines.some(l => l.startsWith('> ') || l.trim() === '>');
       let bqContent;
       if (hasNestedQuote) {
-        bqContent = parseCustomMarkdown(bqLines.join('\n'));
+        // 空行で区切ってセクションに分割し、各セクションを再帰処理する。
+        // セクション間の空行は <br> として挿入する（ネストなしと同じ挙動）。
+        const sections = [];
+        let current = [];
+        for (const l of bqLines) {
+          if (l.trim() === '') {
+            if (current.length > 0) {
+              sections.push({ lines: current, empty: false });
+              current = [];
+            }
+            sections.push({ lines: [], empty: true });
+          } else {
+            current.push(l);
+          }
+        }
+        if (current.length > 0) sections.push({ lines: current, empty: false });
+
+        bqContent = sections.map((sec, idx, arr) => {
+          if (sec.empty) {
+            const prev = arr[idx - 1];
+            const next = arr[idx + 1];
+            if (prev && !prev.empty && next && !next.empty) return '<br>';
+            return '';
+          }
+          return parseCustomMarkdown(sec.lines.join('\n'));
+        }).join('');
       } else {
         bqContent = bqLines
           .map((l, idx, arr) => {
