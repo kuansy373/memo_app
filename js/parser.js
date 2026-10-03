@@ -2,12 +2,37 @@ import { APP_BASE } from './constants.js';
 import { LINK_ICON } from './svg.js';
 import { escapeHtml, escapeAttr, renderCodeBlock } from './utils.js';
 
+// --- モジュールレベル定数・純粋関数 ---
+
+const CALLOUT_COLORS = {
+  tip: '#0ea5e9', note: '#6366f1', warning: '#f59e0b', danger: '#ef4444', info: '#0ea5e9',
+};
+const parseCalloutColor = type => CALLOUT_COLORS[type] ?? '#888';
+
+function isTableRow(line) {
+  const t = line.trim();
+  return t.startsWith('|') && t.endsWith('|');
+}
+
+function isSeparator(line) {
+  return /^\|[\s\-:|]+\|/.test(line.trim());
+}
+
+function parseTableAligns(sepLine) {
+  return sepLine.trim().slice(1, -1).split('|').map(s => {
+    s = s.trim();
+    if (s.startsWith(':') && s.endsWith(':')) return 'center';
+    if (s.endsWith(':')) return 'right';
+    return 'left';
+  });
+}
+
 export function parseAliases(text) {
   const aliases = {};
-  text.split('\n').forEach(line => {
+  for (const line of text.split('\n')) {
     const m = line.match(/^@alias\s+(\S+)\s+(\S+)/);
     if (m) aliases[m[1]] = m[2];
-  });
+  }
   return aliases;
 }
 
@@ -17,14 +42,14 @@ export function parseCustomMarkdown(text) {
   let i = 0;
   let inList = null;
 
-  const aliases = parseAliases(text);
-
-  // @lastPath <placeholder> の読み取り
+  const aliases = {};
   let lastPathPlaceholder = null;
-  text.split('\n').forEach(line => {
-    const m = line.match(/^@lastPath\s+(\S+)/);
-    if (m) lastPathPlaceholder = m[1];
-  });
+  for (const line of lines) {
+    const a = line.match(/^@alias\s+(\S+)\s+(\S+)/);
+    if (a) { aliases[a[1]] = a[2]; continue; }
+    const p = line.match(/^@lastPath\s+(\S+)/);
+    if (p) lastPathPlaceholder = p[1];
+  }
 
   function parseInline(s) {
     const codes = [];
@@ -81,27 +106,34 @@ export function parseCustomMarkdown(text) {
     inList = null;
   }
 
-  function isTableRow(line) {
-    const t = line.trim();
-    return t.startsWith('|') && t.endsWith('|');
+  function openList(type, num) {
+    parts.push(type === 'ol' ? `<ol start="${num}">` : '<ul>');
   }
 
-  function isSeparator(line) {
-    return /^\|[\s\-:|]+\|/.test(line.trim());
-  }
+  // blockquote の行群（> を剥がし済み）をセクション分割して HTML 化する。
+  // ネストあり・なしを統一ロジックで処理し、空行を <br> として挿入する。
+  function renderBqLines(bqLines) {
+    const sections = [];
+    let cur = [];
+    for (const l of bqLines) {
+      if (l.trim() === '') {
+        if (cur.length) { sections.push(cur); cur = []; }
+        sections.push(null); // null = 空行マーカー
+      } else {
+        cur.push(l);
+      }
+    }
+    if (cur.length) sections.push(cur);
 
-  function parseTableAligns(sepLine) {
-    return sepLine.trim().slice(1, -1).split('|').map(s => {
-      s = s.trim();
-      if (s.startsWith(':') && s.endsWith(':')) return 'center';
-      if (s.endsWith(':')) return 'right';
-      return 'left';
-    });
-  }
-
-  function parseCalloutColor(type) {
-    const colors = { tip: '#0ea5e9', note: '#6366f1', warning: '#f59e0b', danger: '#ef4444', info: '#0ea5e9' };
-    return colors[type] || '#888';
+    return sections.map((sec, idx, arr) => {
+      if (sec === null) {
+        return (arr[idx - 1] && arr[idx + 1]) ? '<br>' : '';
+      }
+      const hasNested = sec.some(l => l.startsWith('> ') || l.trim() === '>');
+      return hasNested
+        ? parseCustomMarkdown(sec.join('\n'))
+        : sec.map(l => `<p>${parseInline(l)}</p>`).join('');
+    }).join('');
   }
 
   while (i < lines.length) {
@@ -223,19 +255,15 @@ export function parseCustomMarkdown(text) {
       const fence = trimmed.match(/^(`+)/)[1];
       const rest = trimmed.slice(fence.length).trim();
       const isCodeFence = rest === '' || /^\w+$/.test(rest); // 言語指定のみ or 空
-      const closingIdx = isCodeFence
-        ? lines.slice(i + 1).findIndex(l => l.trim() === fence)
-        : -1;
-      if (isCodeFence && closingIdx !== -1) {
-        closeList();
-        i++;
-        let code = '';
-        while (i < lines.length && lines[i].trim() !== fence) {
-          code += lines[i] + '\n';
-          i++;
+      if (isCodeFence) {
+        const closeIdx = lines.findIndex((l, j) => j > i && l.trim() === fence);
+        if (closeIdx !== -1) {
+          closeList();
+          const code = lines.slice(i + 1, closeIdx).join('\n') + '\n';
+          i = closeIdx + 1;
+          parts.push(renderCodeBlock(code));
+          continue;
         }
-        parts.push(renderCodeBlock(code));
-        i++; continue;
       }
     }
 
@@ -309,49 +337,7 @@ export function parseCustomMarkdown(text) {
       }
       // 末尾の空行を除去
       while (bqLines.length > 0 && bqLines[bqLines.length - 1].trim() === '') bqLines.pop();
-      const hasNestedQuote = bqLines.some(l => l.startsWith('> ') || l.trim() === '>');
-      let bqContent;
-      if (hasNestedQuote) {
-        // 空行で区切ってセクションに分割し、各セクションを再帰処理する。
-        // セクション間の空行は <br> として挿入する（ネストなしと同じ挙動）。
-        const sections = [];
-        let current = [];
-        for (const l of bqLines) {
-          if (l.trim() === '') {
-            if (current.length > 0) {
-              sections.push({ lines: current, empty: false });
-              current = [];
-            }
-            sections.push({ lines: [], empty: true });
-          } else {
-            current.push(l);
-          }
-        }
-        if (current.length > 0) sections.push({ lines: current, empty: false });
-
-        bqContent = sections.map((sec, idx, arr) => {
-          if (sec.empty) {
-            const prev = arr[idx - 1];
-            const next = arr[idx + 1];
-            if (prev && !prev.empty && next && !next.empty) return '<br>';
-            return '';
-          }
-          return parseCustomMarkdown(sec.lines.join('\n'));
-        }).join('');
-      } else {
-        bqContent = bqLines
-          .map((l, idx, arr) => {
-            if (l.trim() === '') {
-              const prev = arr[idx - 1];
-              const next = arr[idx + 1];
-              if (prev && prev.trim() !== '' && next && next.trim() !== '') return '<br>';
-              return '';
-            }
-            return `<p>${parseInline(l)}</p>`;
-          })
-          .join('');
-      }
-      parts.push(`<blockquote>${bqContent}</blockquote>`);
+      parts.push(`<blockquote>${renderBqLines(bqLines)}</blockquote>`);
       continue;
     }
 
@@ -361,11 +347,6 @@ export function parseCustomMarkdown(text) {
       const type = /\d+\./.test(listMatch[2]) ? 'ol' : 'ul';
       const num = type === 'ol' ? parseInt(listMatch[2], 10) : null;
       const content = listMatch[3];
-
-      function openList(t, n) {
-        const tag = t === 'ol' ? `<ol start="${n}">` : `<ul>`;
-        parts.push(tag);
-      }
 
       if (!inList) {
         openList(type, num);
