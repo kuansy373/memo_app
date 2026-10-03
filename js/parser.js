@@ -110,12 +110,13 @@ export function parseCustomMarkdown(text) {
     parts.push(type === 'ol' ? `<ol start="${num}">` : '<ul>');
   }
 
-  // blockquote の行群（> を剥がし済み）をセクション分割して HTML 化する。
-  // ネストあり・なしを統一ロジックで処理し、空行を <br> として挿入する。
-  function renderBqLines(bqLines) {
+  // 行群（> を剥がし済み）を空行で区切りセクション分割して HTML 化する。
+  // fullParse: コールアウト本文など全構文を処理したいときは true、
+  //            blockquote のように <p> で十分な場合は false。
+  function renderLines(bodyLines, fullParse) {
     const sections = [];
     let cur = [];
-    for (const l of bqLines) {
+    for (const l of bodyLines) {
       if (l.trim() === '') {
         if (cur.length) { sections.push(cur); cur = []; }
         sections.push(null); // null = 空行マーカー
@@ -129,12 +130,17 @@ export function parseCustomMarkdown(text) {
       if (sec === null) {
         return (arr[idx - 1] && arr[idx + 1]) ? '<br>' : '';
       }
+      if (fullParse) {
+        return parseCustomMarkdown(sec.join('\n'));
+      }
       const hasNested = sec.some(l => l.startsWith('> ') || l.trim() === '>');
       return hasNested
         ? parseCustomMarkdown(sec.join('\n'))
         : sec.map(l => `<p>${parseInline(l)}</p>`).join('');
     }).join('');
   }
+
+  const renderBqLines = bqLines => renderLines(bqLines, false);
 
   while (i < lines.length) {
     const line = lines[i];
@@ -284,32 +290,7 @@ export function parseCustomMarkdown(text) {
           bodyLines.push(lines[i].replace(/^>\s?/, ''));
           i++;
         }
-        // コードブロックを含めてレンダリング
-        let body = '';
-        let bi = 0;
-        while (bi < bodyLines.length) {
-          const bl = bodyLines[bi];
-          if (bl.trim().startsWith('```')) {
-            const fence = bl.trim().match(/^(`+)/)[1];
-            bi++;
-            let code = '';
-            while (bi < bodyLines.length && !bodyLines[bi].trim().startsWith(fence)) {
-              code += bodyLines[bi] + '\n';
-              bi++;
-            }
-            body += renderCodeBlock(code);
-            bi++; continue;
-          }
-          if (bl.trim() === '') {
-            const next = bodyLines[bi + 1];
-            if (body !== '' && next && next.trim() !== '') {
-              body += '<br>';
-            }
-            bi++; continue;
-          }
-          body += '<p>' + parseInline(bl) + '</p>';
-          bi++;
-        }
+        const body = renderLines(bodyLines, true);
         const innerHtml = `<div class="callout-body">${body}</div>`;
         if (foldable) {
           const openAttr = defaultOpen ? ' open' : '';
