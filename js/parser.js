@@ -265,9 +265,10 @@ export function parseCustomMarkdown(text) {
         const closeIdx = lines.findIndex((l, j) => j > i && l.trim() === fence);
         if (closeIdx !== -1) {
           closeList();
+          const lang = rest;
           const code = lines.slice(i + 1, closeIdx).join('\n') + '\n';
           i = closeIdx + 1;
-          parts.push(renderCodeBlock(code));
+          parts.push(renderCodeBlock(code, lang));
           continue;
         }
       }

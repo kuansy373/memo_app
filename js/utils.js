@@ -18,11 +18,17 @@ export function escapeAttr(text) {
 // コピーボタン付きコードブロックの HTML を生成する
 // ※ ui.js の copyCode は「ボタンの次の兄弟要素 > code」という構造に依存している
 // ※ クリックは ui.js の preview に付けたイベント委譲が data-action="copy" で拾う
-export function renderCodeBlock(code) {
+export function renderCodeBlock(code, lang = '') {
+  let highlighted;
+  if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang)) {
+    highlighted = hljs.highlight(code.trimEnd(), { language: lang }).value;
+  } else {
+    highlighted = escapeHtml(code.trimEnd());  // 自動検出せずそのまま
+  }
   return (
     `<div class="code-block-wrapper">` +
     `<button class="copy-btn" data-action="copy" aria-label="コピー">${COPY_ICON}</button>` +
-    `<pre><code>${escapeHtml(code)}</code></pre>` +
+    `<pre><code class="hljs${lang ? ` language-${lang}` : ''}">${highlighted}</code></pre>` +
     `</div>`
   );
 }
