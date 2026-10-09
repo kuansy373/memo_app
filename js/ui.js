@@ -47,11 +47,37 @@ async function checkAuth() {
 }
 
 // ----------------------------------------
+// Theme
+// ----------------------------------------
+
+function applyTheme(theme) {
+  const lightLink = document.getElementById('hljs-light');
+  const darkLink  = document.getElementById('hljs-dark');
+  const resolved =
+    theme === 'light' ? 'light' :
+    theme === 'dark'  ? 'dark'  :
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+  document.documentElement.setAttribute('data-theme', resolved);
+  lightLink.disabled = (resolved === 'dark');
+  darkLink.disabled  = (resolved === 'light');
+  localStorage.setItem('theme', theme);
+}
+
+function syncThemeRadio() {
+  const saved = localStorage.getItem('theme') ?? 'system';
+  preview.querySelectorAll('input[data-action="theme"]').forEach(radio => {
+    radio.checked = (radio.value === saved);
+  });
+}
+
+// ----------------------------------------
 // Preview
 // ----------------------------------------
 
 function update() {
   preview.innerHTML = parseCustomMarkdown(editor.value);
+  syncThemeRadio();
 
   // @masks: 行クリックで行全体をトグル表示
   preview.querySelectorAll('.masks-row').forEach(row => {
@@ -197,8 +223,20 @@ if (localStorage.getItem('note:' + rootNoteKey) === null) {
 
 - [Markdown記法の一覧](r:/Markdown記法)
 ---
-- [-](r:/設定)
+- [設定](r:/settings)
 - [フォーム](r:/form)`
+  );
+}
+
+if (localStorage.getItem('note:' + APP_BASE + 'root/settings') === null) {
+  localStorage.setItem('note:' + APP_BASE + 'root/settings',
+    `テーマ
+
+<div class="theme-selector">
+  <label><input type="radio" name="theme" value="system"  data-action="theme" checked> システム</label>
+  <label><input type="radio" name="theme" value="light"   data-action="theme"> ライト</label>
+  <label><input type="radio" name="theme" value="dark"    data-action="theme"> ダーク</label>
+</div>`
   );
 }
 
@@ -208,7 +246,13 @@ if (localStorage.getItem('note:' + APP_BASE + 'root/form') === null) {
   );
 }
 
-document.getElementById('app').className = 'mode-preview';
+// 起動時にテーマを適用
+applyTheme(localStorage.getItem('theme') ?? 'system');
+
+// システムテーマ変更を追跡
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if ((localStorage.getItem('theme') ?? 'system') === 'system') applyTheme('system');
+});
 
 function initFromURL() {
   const fullPath = decodeURIComponent(location.pathname);
@@ -263,6 +307,12 @@ preview.addEventListener('click', e => {
   const copyBtn = e.target.closest('[data-action="copy"]');
   const wrapper = e.target.closest('.code-block-wrapper');
   const link = e.target.closest('a');
+
+  // テーマ切り替えラジオ
+  if (e.target.matches('input[data-action="theme"]')) {
+    applyTheme(e.target.value);
+    return;
+  }
 
   // コピーボタン
   if (copyBtn) copyCode(copyBtn);

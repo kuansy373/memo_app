@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>マークダウンメモ帳</title>
+  <script>
+    const t = localStorage.getItem('theme') ?? 'system';
+    const resolved = t === 'dark' ? 'dark'
+      : t === 'light' ? 'light'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', resolved);
+  </script>
   <link rel="stylesheet" href="/memo_app/style.css">
   <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
   <link id="hljs-dark"  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" disabled>
@@ -16,7 +23,7 @@
     <button id="push-btn" onclick="push()" style="display:none;">Push</button>
     <button id="pull-btn" onclick="pull()" style="display:none;">Pull</button>
     <button id="rename-btn">
-      <img src="/memo_app/icons/edit.svg" width="16" height="16" alt="名前変更">
+      <span class="icon" aria-label="名前変更"></span>
     </button>
   </header>
 
@@ -26,11 +33,11 @@
     <button id="cancel-pull-btn" onclick="cancelPull()" style="display:none;">pullしない</button>
     <button id="pull-diff-btn" onclick="showPullDiff()" style="display:none;">pull内容を確認</button>
     <button class="btn-toggle" onclick="togglePane()" style="display: none;">
-      <img class="btn-icon btn-icon--pen" width="20" height="20" alt="編集">
+      <span class="btn-icon btn-icon--pen" aria-label="編集"></span>
     </button>
   </div>
 
-  <div id="app">
+  <div id="app" class="mode-preview">
     <textarea id="editor" spellcheck="false"></textarea>
     <div id="preview"></div>
   </div>
