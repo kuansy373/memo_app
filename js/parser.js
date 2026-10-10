@@ -9,6 +9,14 @@ const CALLOUT_COLORS = {
 };
 const parseCalloutColor = type => CALLOUT_COLORS[type] ?? '#888';
 
+function isBlockquoteLine(line) {
+  return line.startsWith('> ') || line.trim() === '>' || /^ +> /.test(line) || /^ +>$/.test(line);
+}
+
+function stripBlockquotePrefix(line) {
+  return line.replace(/^ *> ?/, '');
+}
+
 function isTableRow(line) {
   const t = line.trim();
   return t.startsWith('|') && t.endsWith('|');
@@ -274,7 +282,7 @@ export function parseCustomMarkdown(text) {
       }
     }
 
-    if (trimmed.startsWith('> ') || trimmed === '>') {
+    if (isBlockquoteLine(line)) {
       closeList();
       const calloutMatch = trimmed.match(/^> \[!(\w*)\]([+-])?\s*(.*)/);
       if (calloutMatch) {
@@ -290,8 +298,8 @@ export function parseCustomMarkdown(text) {
           const color = parseCalloutColor(type);
           i++;
           const bodyLines = [];
-          while (i < lines.length && (lines[i].startsWith('> ') || lines[i].startsWith('>'))) {
-            bodyLines.push(lines[i].replace(/^>\s?/, ''));
+          while (i < lines.length && isBlockquoteLine(lines[i])) {
+            bodyLines.push(stripBlockquotePrefix(lines[i]));
             i++;
           }
           const body = renderLines(bodyLines, true);
@@ -326,8 +334,8 @@ export function parseCustomMarkdown(text) {
       }
       // 連続する > 行 を一つの blockquote にする
       const bqLines = [];
-      while (i < lines.length && (lines[i].startsWith('> ') || lines[i].trim() === '>')) {
-        bqLines.push(lines[i].replace(/^>\s?/, ''));
+      while (i < lines.length && isBlockquoteLine(lines[i])) {
+        bqLines.push(stripBlockquotePrefix(lines[i]));
         i++;
       }
       // 末尾の空行を除去
