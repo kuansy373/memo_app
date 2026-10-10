@@ -27,7 +27,7 @@
   --fg-link-icon:    #2563eb;
   --fg-code:         #444;
   --fg-copy-icon:    #1c1c1c;
-  --fg-blockquote:   #6e6e6e;
+  --fg-blockquote:   #565656;
   --fg-th:           #1c1c1c;
   --fg-td:           #1c1c1c;
 
@@ -77,7 +77,7 @@
   --fg-link-icon:    #6ea8fe;
   --fg-code:         #c5c5c5;
   --fg-copy-icon:    #e0e0dc;
-  --fg-blockquote:   #888;
+  --fg-blockquote:   #bbb;
   --fg-th:           #e0e0dc;
   --fg-td:           #e0e0dc;
 
@@ -265,7 +265,7 @@ textarea {
   font-size: 0.95em;
   border-left: 4px solid var(--border-blockquote);
   margin: 0.6em 0;
-  padding: 4px 12px;
+  padding: 4px 10px;
   color: var(--fg-blockquote);
 }
 #preview a { color: var(--fg-link); text-decoration: none; }
@@ -293,7 +293,7 @@ textarea {
   background: var(--bg-code-block);
   border: 1px solid var(--border-code);
   border-radius: 4px;
-  padding: 10px;
+  padding: 10px 10px 5px;
   overflow-x: auto;
   overscroll-behavior-x: none;
   margin: 0.6em 0;
@@ -301,9 +301,8 @@ textarea {
 #preview pre code {
   font-size: 13px;
   background: none;
-  padding: 0;
-  padding-bottom: 5px;
-  margin-right: 24px;
+  margin-right: 26px;
+  padding: 0 0 7px;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
@@ -318,7 +317,7 @@ textarea {
 }
 .copy-btn {
   position: absolute;
-  top: 11px;
+  top: 9px;
   right: 7px;
   display: none;
   background: var(--bg-copy-icon);
