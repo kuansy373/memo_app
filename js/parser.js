@@ -276,40 +276,53 @@ export function parseCustomMarkdown(text) {
 
     if (trimmed.startsWith('> ') || trimmed === '>') {
       closeList();
-      const calloutMatch = trimmed.match(/^> \[!(\w+)\]([+-])?\s*(.*)/);
+      const calloutMatch = trimmed.match(/^> \[!(\w*)\]([+-])?\s*(.*)/);
       if (calloutMatch) {
         const type = calloutMatch[1].toLowerCase();
         const foldSymbol = calloutMatch[2];
-        const foldable = foldSymbol === '+' || foldSymbol === '-';
-        const defaultOpen = foldSymbol === '+';
-        const title = calloutMatch[3] || type;
-        const color = parseCalloutColor(type);
-        i++;
-        // > プレフィックスを剥がした行を収集
-        const bodyLines = [];
-        while (i < lines.length && (lines[i].startsWith('> ') || lines[i].startsWith('>'))) {
-          bodyLines.push(lines[i].replace(/^>\s?/, ''));
+        const isPlainFold = type === '' && (foldSymbol === '+' || foldSymbol === '-');
+        const isValidCallout = type !== '' || isPlainFold;
+
+        if (isValidCallout) {
+          const foldable = isPlainFold || foldSymbol === '+' || foldSymbol === '-';
+          const defaultOpen = foldSymbol === '+';
+          const title = calloutMatch[3] || type;
+          const color = parseCalloutColor(type);
           i++;
+          const bodyLines = [];
+          while (i < lines.length && (lines[i].startsWith('> ') || lines[i].startsWith('>'))) {
+            bodyLines.push(lines[i].replace(/^>\s?/, ''));
+            i++;
+          }
+          const body = renderLines(bodyLines, true);
+          const innerHtml = `<div class="callout-body">${body}</div>`;
+          if (foldable) {
+            const openAttr = defaultOpen ? ' open' : '';
+            if (isPlainFold) {
+              parts.push(
+                `<details${openAttr}>` +
+                `<summary>${title}</summary>` +
+                body +
+                `</details>`
+              );
+            } else {
+              parts.push(
+                `<details class="callout"${openAttr} style="border-color:${color};">` +
+                `<summary class="callout-title" style="color:${color};">${title}</summary>` +
+                innerHtml +
+                `</details>`
+              );
+            }
+          } else {
+            parts.push(
+              `<div class="callout" style="border-color:${color};">` +
+              `<div class="callout-title" style="color:${color};">${title}</div>` +
+              body +
+              `</div>`
+            );
+          }
+          continue;
         }
-        const body = renderLines(bodyLines, true);
-        const innerHtml = `<div class="callout-body">${body}</div>`;
-        if (foldable) {
-          const openAttr = defaultOpen ? ' open' : '';
-          parts.push(
-            `<details class="callout"${openAttr} style="border-color:${color};">` +
-            `<summary class="callout-title" style="color:${color};">${title}</summary>` +
-            innerHtml +
-            `</details>`
-          );
-        } else {
-          parts.push(
-            `<div class="callout" style="border-color:${color};">` +
-            `<div class="callout-title" style="color:${color};">${title}</div>` +
-            body +
-            `</div>`
-          );
-        }
-        continue;
       }
       // 連続する > 行 を一つの blockquote にする
       const bqLines = [];
