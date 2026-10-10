@@ -274,7 +274,7 @@ export function parseCustomMarkdown(text) {
         if (closeIdx !== -1) {
           closeList();
           const lang = rest;
-          const code = lines.slice(i + 1, closeIdx).join('\n') + '\n';
+          const code = lines.slice(i + 1, closeIdx).join('\n');
           i = closeIdx + 1;
           parts.push(renderCodeBlock(code, lang));
           continue;

@@ -21,9 +21,9 @@ export function escapeAttr(text) {
 export function renderCodeBlock(code, lang = '') {
   let highlighted;
   if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang)) {
-    highlighted = hljs.highlight(code.trimEnd(), { language: lang }).value;
+    highlighted = hljs.highlight(code, { language: lang }).value;
   } else {
-    highlighted = escapeHtml(code.trimEnd());  // 自動検出せずそのまま
+    highlighted = escapeHtml(code);
   }
   return (
     `<div class="code-block-wrapper">` +

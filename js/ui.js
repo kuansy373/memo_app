@@ -362,7 +362,7 @@ preview.addEventListener('keydown', e => {
 // ----------------------------------------
 
 function copyCode(btn) {
-  const code = btn.nextElementSibling.querySelector('code').innerText;
+  const code = btn.nextElementSibling.querySelector('code').textContent;
   navigator.clipboard.writeText(code).catch(() => {});
 
   if (btn._copyTimer) clearTimeout(btn._copyTimer);
