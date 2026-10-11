@@ -31,10 +31,11 @@ const lastSyncedMap = new Map(); // path → サーバー確認済みの内容�
 const pullNotes = new Set();
 
 // ----------------------------------------
-// 認証チェック
+// 認証状態チェック
 // ----------------------------------------
 
 let isLoggedIn = false;
+let isAuthChecking = true;
 
 async function checkAuth() {
   try {
@@ -43,6 +44,8 @@ async function checkAuth() {
     isLoggedIn = loggedIn;
   } catch (e) {
     isLoggedIn = false;
+  } finally {
+    isAuthChecking = false;
   }
 }
 
@@ -478,6 +481,11 @@ function handleInInput(event) {
 
 function checkPushStatus() {
   const toggleBtn = document.querySelector('.btn-toggle');
+
+  if (isAuthChecking) {
+    toggleBtn.style.display = 'none';
+    return;
+  }
 
   if (!isLoggedIn) {
     toggleBtn.style.display = 'inline';
