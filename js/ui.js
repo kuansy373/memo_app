@@ -688,4 +688,5 @@ if (urlParams.get('error') === 'unauthorized_email') {
   history.replaceState(null, '', cleanURL);
 }
 
-checkAuth().then(() => initFromURL());
+initFromURL();
+checkAuth().then(() => checkCurrentNote());
