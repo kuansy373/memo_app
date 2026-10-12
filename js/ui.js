@@ -471,6 +471,7 @@ function handleInInput(event) {
   editor.value = lines.join('\n');
   storage.set(currentNote, editor.value);
   update();
+  checkPushStatus();
 
   event.target.value = '';
 }
