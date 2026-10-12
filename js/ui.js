@@ -182,6 +182,14 @@ function updateModeLabel() {
     currentMode === 'diff' ? '差分確認中' : 'プレビュー中';
 }
 
+function updateModeIcon() {
+  document.querySelectorAll('.btn-icon').forEach(icon => {
+    icon.classList.toggle('btn-icon--pen', currentMode === 'preview');
+    icon.classList.toggle('btn-icon--book', currentMode === 'edit');
+    icon.alt = currentMode === 'edit' ? 'プレビュー' : '編集';
+  });
+}
+
 function ensurePreview() {
   if (currentMode === 'edit') togglePane();
   // diff モード中はそのまま維持
@@ -193,6 +201,7 @@ function togglePane() {
     currentMode = currentMode === 'edit' ? 'preview' : 'edit'; // その後にトグル
     applyModeClass();
     updateModeLabel();
+    updateModeIcon();
     if (currentMode === 'preview') update();
     return;
   }
@@ -204,12 +213,7 @@ function togglePane() {
   currentMode = nextMode;
   applyModeClass();
   updateModeLabel();
-
-  document.querySelectorAll('.btn-icon').forEach(icon => {
-    icon.classList.toggle('btn-icon--pen', currentMode === 'preview');
-    icon.classList.toggle('btn-icon--book', currentMode === 'edit');
-    icon.alt = currentMode === 'edit' ? 'プレビュー' : '編集';
-  });
+  updateModeIcon();
   if (currentMode === 'preview') {
     update();
     checkPushStatus();
