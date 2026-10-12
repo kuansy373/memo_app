@@ -386,6 +386,7 @@ function copyCode(btn) {
 
 function handleInInput(event) {
   if (event.key !== 'Enter') return;
+  if (document.querySelector('.btn-toggle').style.display === 'none') return;
 
   const raw = event.target.value.trim();
   if (!raw) return;
