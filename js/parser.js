@@ -89,7 +89,7 @@ export function parseCustomMarkdown(text) {
           if (lastPathPlaceholder && text === lastPathPlaceholder) {
             label = rawPath.split('/').filter(Boolean).pop() || rawPath;
           }
-          return `<a href="#" data-note-path="${escapeAttr(rawPath)}">${label || rawPath}</a>`;
+          return `<a href="${escapeAttr(rawPath)}" data-note-path="${escapeAttr(rawPath)}">${label || rawPath}</a>`;
         }
 
         if (!/^https?:\/\//.test(url)) {
