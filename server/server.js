@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const passport = require('passport');
@@ -193,6 +194,19 @@ app.post('/api/sync', requireAuth, async (req, res) => {
 app.get('/api/sync/status', requireAuth, async (req, res) => {
   const result = await pool.query('SELECT MAX(updated_at) as last_updated FROM notes');
   res.json({ last_updated: result.rows[0].last_updated });
+});
+
+// ----------------------------------------
+// 静的ファイル配信 & SPA フォールバック
+//（ローカル開発用。APIルートより後に書いているので、本番ではこのコードは実行されない。）
+// ----------------------------------------
+
+// フロントのファイルをそのまま配信（memo_app/ 直下を想定）
+app.use('/memo_app', express.static(path.join(__dirname, '..')));
+
+// APIにマッチしなかったパスはすべて index.html を返す（SPAルーティング）
+app.get('{*path}', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
 // ----------------------------------------
