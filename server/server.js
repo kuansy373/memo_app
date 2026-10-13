@@ -8,6 +8,28 @@ const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 require('dotenv').config();
 const { pool, init } = require('./db');
 
+// ----------------------------------------
+// 環境変数チェック
+// ----------------------------------------
+
+const REQUIRED_ENV = [
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'CALLBACK_URL',
+  'SESSION_SECRET',
+  'FRONTEND_URL',
+  'FRONTEND_ORIGIN',
+  'ALLOWED_EMAIL',
+  'PORT',
+];
+for (const key of REQUIRED_ENV) {
+  if (!process.env[key]) throw new Error(`環境変数 ${key} が設定されていません`);
+}
+
+// ----------------------------------------
+// アプリ設定
+// ----------------------------------------
+
 const app = express();
 
 app.set('trust proxy', 1);
@@ -46,7 +68,7 @@ app.use(passport.session());
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.CALLBACK_URL || 'http://localhost:3000/auth/callback',
+  callbackURL: process.env.CALLBACK_URL,
 }, (accessToken, refreshToken, profile, done) => {
   return done(null, profile);
 }));
@@ -66,12 +88,11 @@ app.get('/auth/callback',
     if (email !== process.env.ALLOWED_EMAIL) {
       req.logout(() => {
         // フロントへリダイレクト時にエラーを伝えるクエリパラメータを付ける
-        const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5500/root';
-        res.redirect(`${frontendURL}?error=unauthorized_email`);
+        res.redirect(`${process.env.FRONTEND_URL}?error=unauthorized_email`);
       });
       return;
     }
-    res.redirect(process.env.FRONTEND_URL || 'http://localhost:5500/root');
+    res.redirect(process.env.FRONTEND_URL);
   }
 );
 
@@ -82,7 +103,7 @@ app.get('/auth/failure', (req, res) => {
 // ログアウト
 app.get('/auth/logout', (req, res) => {
   req.logout(() => {
-    res.redirect(process.env.FRONTEND_URL || 'http://localhost:5500/root');
+    res.redirect(process.env.FRONTEND_URL);
   });
 });
 
@@ -213,7 +234,7 @@ app.get('{*path}', (req, res) => {
 // 起動
 // ----------------------------------------
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 init().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
