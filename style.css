@@ -4,7 +4,12 @@
 
 :root {
   --bg-header:       #fff;
+  --bg-pull-btn:     #efefef;
+  --bg-push-btn:     #efefef;
   --bg-control-row:  #fafafa;
+  --bg-pull-c-btn:   #efefef;
+  --bg-pull-d-btn:   #fff;
+  --bg-push-d-btn:   #fff;
   --bg-preview:      #f5f5f5;
   --bg-textarea:     #fff;
   --bg-code:         #dadada;
@@ -18,8 +23,13 @@
   --fg-header:       #1c1c1c;
   --link-header:     #77a1ff;
   --link-header-hover: #8595b9;
+  --fg-pull-btn:     #000;
+  --fg-push-btn:     #000;
   --fg-rename-btn:   #1c1c1c;
   --fg-control-row:  #666;
+  --fg-pull-c-btn:   #000;
+  --fg-pull-d-btn:   #000;
+  --fg-push-d-btn:   #000;
   --fg-mode-toggle:  #1c1c1c;
   --fg-preview:      #1c1c1c;
   --fg-texxtarea:    #1c1c1c;
@@ -54,7 +64,12 @@
 
 [data-theme="dark"] {
   --bg-header:       #121212;
+  --bg-pull-btn:     #666;
+  --bg-push-btn:     #666;
   --bg-control-row:  #1f1f1f;
+  --bg-pull-c-btn:   #666;
+  --bg-pull-d-btn:   #474747;
+  --bg-push-d-btn:   #474747;
   --bg-preview:      #232323;
   --bg-textarea:     #090909;
   --bg-code:         #3a3a3a;
@@ -68,8 +83,13 @@
   --fg-header:       #e0e0dc;
   --link-header:     #6ea8fe;
   --link-header-hover: #92a9d1;
+  --fg-pull-btn:     #fff;
+  --fg-push-btn:     #fff;
   --fg-rename-btn:   #e0e0dc;
   --fg-control-row:  #999;
+  --fg-pull-c-btn:   #fff;
+  --fg-pull-d-btn:   #fff;
+  --fg-push-d-btn:   #fff;
   --fg-mode-toggle:  #e0e0dc;
   --fg-preview:      #e0e0dc;
   --fg-textarea:     #e0e0dc;
@@ -120,13 +140,13 @@ body {
 ---------------------------------------- */
 
 header {
-  padding: 8px 16px;
+  padding: 8px 12px 8px 16px;
   background: var(--bg-header);
   border-bottom: 1px solid var(--border);
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   flex-shrink: 0;
   letter-spacing: 0.5px;
 }
@@ -142,6 +162,21 @@ header strong {
 header strong::-webkit-scrollbar { display: none; }
 header a { color: var(--link-header); text-decoration: none; }
 header a:hover { color: var(--link-header-hover); text-decoration: underline; }
+
+#pull-btn {
+  background: var(--bg-pull-btn);
+  color: var(--fg-pull-btn);
+}
+#push-btn {
+  background: var(--bg-push-btn);
+  color: var(--fg-push-btn);
+}
+#pull-btn, #push-btn {
+  letter-spacing: 1px;
+  padding: 2px 5px;
+  border-width: 1px;
+  border-radius: 2px;
+}
 
 #rename-btn {
   margin-left: auto;
@@ -166,7 +201,7 @@ header a:hover { color: var(--link-header-hover); text-decoration: underline; }
 ---------------------------------------- */
 
 #control-row {
-  padding: 6px 12px;
+  padding: 6px 9px 6px 12px;
   background: var(--bg-control-row);
   color: var(--fg-control-row);
   border-bottom: 1px solid var(--border);
@@ -177,6 +212,23 @@ header a:hover { color: var(--link-header-hover); text-decoration: underline; }
   height: 36px;
 }
 #control-row #mode-label { flex: 1; }
+
+#cancel-pull-btn {
+  margin-right: 6px;
+  border-radius: 2px;
+  background: var(--bg-pull-c-btn);
+  color: var(--fg-pull-c-btn);
+}
+#pull-diff-btn {
+  background: var(--bg-pull-d-btn);
+  color: var(--fg-pull-d-btn);
+}
+#push-diff-btn {
+  margin-right: 9px;
+  background: var(--bg-push-d-btn);
+  color: var(--fg-push-d-btn);
+}
+#cancel-pull-btn, #pull-diff-btn, #push-diff-btn { padding: 1px 4px; border-width: 1px; }
 
 .btn-toggle { border: none; background: none; user-select: none; }
 .tip { display: inline-flex; align-items: center; gap: 6px; }
