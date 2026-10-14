@@ -61,7 +61,7 @@ export function updateBreadcrumbs() {
     if (index === breadcrumbs.length - 1) {
       return `<span>${crumb.name}</span>`;
     }
-    return `<a href="#" onclick="navigateToIndex(${index}); return false;">${crumb.name}</a>`;
+    return `<a href="${crumb.path}" onclick="navigateToIndex(${index}); return false;">${crumb.name}</a>`;
   }).join(' &gt; ');
 
   document.getElementById('rename-btn').onclick = () => {
