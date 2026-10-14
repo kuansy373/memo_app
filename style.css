@@ -34,7 +34,7 @@
   --fg-preview:      #1c1c1c;
   --fg-texxtarea:    #1c1c1c;
   --fg-link:         #2563eb;
-  --fg-link-icon:    #2563eb;
+  --fg-link-icon:    #373737;
   --fg-code:         #444;
   --fg-copy-icon:    #1c1c1c;
   --fg-blockquote:   #565656;
@@ -94,7 +94,7 @@
   --fg-preview:      #e0e0dc;
   --fg-textarea:     #e0e0dc;
   --fg-link:         #6ea8fe;
-  --fg-link-icon:    #6ea8fe;
+  --fg-link-icon:    #b2b2b2;
   --fg-code:         #c5c5c5;
   --fg-copy-icon:    #e0e0dc;
   --fg-blockquote:   #bbb;
@@ -325,7 +325,7 @@ textarea {
 .link-icon {
   width: 14px;
   height: 14px;
-  margin: 0 0 -1px 2px;
+  margin: 0 0 -1.5px 2px;
   color: var(--fg-link-icon);
 }
 
@@ -338,7 +338,7 @@ textarea {
   font-size: 0.85em;
   color: var(--fg-code);
   background: var(--bg-code);
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 3px;
 }
 #preview pre {
