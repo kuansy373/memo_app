@@ -1,21 +1,24 @@
 import { APP_BASE, API_BASE } from './constants.js';
 import { storage } from './storage.js';
 import { parseCustomMarkdown } from './parser.js';
-import { renderDiff } from './diff.js';
 import { applyTheme, syncThemeRadio } from './theme.js';
 import { copyCode } from './clipboard.js';
 import { handleInInput } from './inout.js';
 import { initNotes } from './initNotes.js';
+import { currentMode, setCurrentMode, pullNotes } from './state.js';
 import {
   rootNoteKey, currentNote,
   switchNote, navigateToIndex,
   pushBreadcrumbsToURL, renameNote,
 } from './navigation.js';
 import {
-  currentMode, setCurrentMode,
-  preDiffMode, setPreDiffMode,
-  lastSyncedMap, pullNotes,
-} from './state.js';
+  isLoggedIn,
+  checkAuth, checkPushStatus, checkCurrentNote,
+  push, pullCurrentNote,
+  exitDiff,
+  showPushDiff, showPullDiff, cancelPull,
+  initSync,
+} from './sync.js';
 
 // ----------------------------------------
 // DOM
@@ -30,25 +33,6 @@ const preview = document.getElementById('preview');
 
 if (localStorage.getItem('system_root_key') === null) {
   localStorage.setItem('system_root_key', `${APP_BASE}root`);
-}
-
-// ----------------------------------------
-// 認証状態チェック
-// ----------------------------------------
-
-let isLoggedIn = false;
-let isAuthChecking = true;
-
-async function checkAuth() {
-  try {
-    const res = await fetch(`${API_BASE}/auth/status`, { credentials: 'include' });
-    const { loggedIn } = await res.json();
-    isLoggedIn = loggedIn;
-  } catch (e) {
-    isLoggedIn = false;
-  } finally {
-    isAuthChecking = false;
-  }
 }
 
 // ----------------------------------------
@@ -255,6 +239,7 @@ function togglePane() {
 // ----------------------------------------
 
 initNotes(rootNoteKey);
+initSync({ editor, preview, update, applyModeClass, updateModeLabel, setVisible });
 
 // 起動時にテーマを適用
 applyTheme(localStorage.getItem('theme') ?? 'system');
@@ -365,204 +350,6 @@ preview.addEventListener('click', e => {
 preview.addEventListener('keydown', e => {
   if (e.target.matches('.in-input')) handleInInput(e, editor, currentNote, update, checkPushStatus);
 });
-
-// ----------------------------------------
-// Push / Pull
-// ----------------------------------------
-
-function checkPushStatus() {
-  const toggleBtn = document.querySelector('.btn-toggle');
-
-  if (isAuthChecking) {
-    toggleBtn.style.display = 'none';
-    return;
-  }
-
-  if (!isLoggedIn) {
-    toggleBtn.style.display = 'inline';
-    setVisible('push-btn', false);
-    setVisible('push-diff-btn', false);
-    setVisible('pull-btn', false);
-    setVisible('pull-diff-btn', false);
-    return;
-  }
-
-  if (pullNotes.has(currentNote)) {
-    toggleBtn.style.display = 'none';
-    setVisible('pull-btn', true);
-    setVisible('pull-diff-btn', true);
-    setVisible('push-btn', false);
-    setVisible('push-diff-btn', false);
-    return;
-  }
-
-  const lastSynced = lastSyncedMap.get(currentNote);
-  if (lastSynced === undefined) {
-    toggleBtn.style.display = 'none';
-    setVisible('push-btn', false);
-    setVisible('push-diff-btn', false);
-    setVisible('pull-diff-btn', false); // pull-btn は pullNotes の分岐でのみ表示されるため、ここでは操作しない
-    return;
-  }
-
-  // pullの非表示が確定してから表示
-  toggleBtn.style.display = 'inline';
-
-  const needsPush = editor.value !== lastSynced;
-  setVisible('push-btn', needsPush);
-  setVisible('push-diff-btn', needsPush);
-  setVisible('pull-btn', false);
-  setVisible('pull-diff-btn', false);
-}
-
-async function checkCurrentNote() {
-  if (!isLoggedIn) return;
-  const note = currentNote; // 非同期中に切り替わっても note を固定
-
-  if (pullNotes.has(note)) {
-    checkPushStatus();
-    return;
-  }
-  if (lastSyncedMap.has(note)) {
-    // サーバー確認済みの場合はローカルと最後の同期内容の比較だけ行う
-    checkPushStatus();
-    return;
-  }
-
-  try {
-    const localContent = storage.get(note);
-    const res = await fetch(`${API_BASE}/api/notes${note}`, { credentials: 'include' });
-
-    // 非同期完了前に別ノートへ移動していたら結果を捨てる
-    if (note !== currentNote) return;
-    if (!res.ok && res.status !== 404) return; // 404以外のエラーは無視
-    if (res.status === 404) {
-      // サーバーに存在しない → 空を最後の同期内容として push を促す
-      lastSyncedMap.set(note, '');
-      checkPushStatus();
-      return;
-    }
-
-    const { content: serverContent } = await res.json();
-    lastSyncedMap.set(note, serverContent); // ノートごとに最後の同期内容を記録
-
-    if (serverContent !== localContent) {
-      pullNotes.add(note);
-    }
-    checkPushStatus();
-  } catch (e) {}
-}
-
-async function pullCurrentNote() {
-  const note = currentNote;
-  const wasDiff = currentMode === 'diff';
-  try {
-    const res = await fetch(`${API_BASE}/api/notes${note}`, { credentials: 'include' });
-    if (!res.ok) return; // 403・401 などはここで止める
-    const { content } = await res.json();
-    storage.set(note, content);
-    lastSyncedMap.set(note, content); // ノートごとに最後の同期内容を更新
-    if (note === currentNote) {
-      setVisible('cancel-pull-btn', false);
-      editor.value = content;
-      if (wasDiff) {
-        setCurrentMode('preview');
-        applyModeClass();
-        update();
-        updateModeLabel();
-      } else {
-        update();
-      }
-    }
-    pullNotes.delete(note);
-    if (note === currentNote) {
-      checkPushStatus();
-    }
-  } catch (e) {}
-}
-
-async function push() {
-  const note = currentNote; // push 中に切り替わっても note を固定
-  const wasDiff = currentMode === 'diff';
-  const content = storage.get(note) ?? '';
-  await fetch(`${API_BASE}/api/notes${note}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
-    credentials: 'include'
-  });
-  lastSyncedMap.set(note, content); // ノートごとに最後の同期内容を更新
-  if (note === currentNote) {
-    if (wasDiff) {
-      setCurrentMode('preview');
-      applyModeClass();
-      update();
-      updateModeLabel();
-    }
-    checkPushStatus();
-  }
-}
-
-// ----------------------------------------
-// Diff 表示
-// ----------------------------------------
-
-// diff モードに入る共通処理
-function enterDiff(oldText, newText) {
-  setPreDiffMode(currentMode); // 戻り先を記憶（edit / preview）
-  preview.innerHTML = renderDiff(oldText, newText);
-  setCurrentMode('diff');
-  applyModeClass();
-  updateModeLabel();
-}
-
-// diff モードから抜ける（入る前のモードに戻る）
-function exitDiff() {
-  setCurrentMode(preDiffMode);
-  applyModeClass();
-  if (currentMode === 'preview') update();
-  updateModeLabel();
-  checkPushStatus();
-}
-
-// push確認: サーバー(赤) → ローカル(緑)
-function showPushDiff() {
-  // トグル: すでに diff 中なら戻る
-  if (currentMode === 'diff') {
-    exitDiff();
-    return;
-  }
-  const local = editor.value;
-  const server = lastSyncedMap.get(currentNote) ?? '';
-  enterDiff(server, local);
-}
-
-// pullしない: pullNotes から除外してdiffモードのまま維持
-function cancelPull() {
-  pullNotes.delete(currentNote);
-  setVisible('cancel-pull-btn', false);
-  const local = editor.value;
-  preview.innerHTML = renderDiff(local, local);
-  checkPushStatus();
-}
-
-// pull確認: ローカル(赤) → サーバー(緑)
-async function showPullDiff() {
-  // トグル: すでに diff 中なら戻る
-  if (currentMode === 'diff') {
-    exitDiff();
-    setVisible('cancel-pull-btn', false);
-    return;
-  }
-  const local = editor.value;
-  try {
-    const res = await fetch(`${API_BASE}/api/notes${currentNote}`, { credentials: 'include' });
-    if (!res.ok) return;
-    const { content: server } = await res.json();
-    enterDiff(local, server);
-    setVisible('cancel-pull-btn', true);
-  } catch (e) {}
-}
 
 // ----------------------------------------
 // グローバル公開（HTML の onclick から呼ばれる関数）
