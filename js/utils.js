@@ -16,8 +16,8 @@ export function escapeAttr(text) {
 }
 
 // コピーボタン付きコードブロックの HTML を生成する
-// ※ ui.js の copyCode は「ボタンの次の兄弟要素 > code」という構造に依存している
-// ※ クリックは ui.js の preview に付けたイベント委譲が data-action="copy" で拾う
+// ※ main.js の copyCode は「ボタンの次の兄弟要素 > code」という構造に依存している
+// ※ クリックは main.js の preview に付けたイベント委譲が data-action="copy" で拾う
 export function renderCodeBlock(code, lang = '') {
   let highlighted;
   if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang)) {

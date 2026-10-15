@@ -6,21 +6,6 @@ export let rootNoteKey = localStorage.getItem('system_root_key') || `${APP_BASE}
 export let currentNote = rootNoteKey;
 export let breadcrumbs = [];
 
-// ui.js から注入される依存関数
-let _editor;
-let _update;
-let _ensurePreview;
-let _checkCurrentNote;
-let _checkPushStatus;
-
-export function initNavigation(editor, update, ensurePreview, checkCurrentNote, checkPushStatus) {
-  _editor = editor;
-  _update = update;
-  _ensurePreview = ensurePreview;
-  _checkCurrentNote = checkCurrentNote;
-  _checkPushStatus = checkPushStatus;
-}
-
 export function parsePathToCrumbs(fullPath) {
   if (!fullPath.startsWith(APP_BASE)) {
     return [{ name: fullPath, path: fullPath }];
@@ -37,38 +22,15 @@ export function parsePathToCrumbs(fullPath) {
 
 export function switchNote(path) {
   const fullPath = path.startsWith(APP_BASE) ? path : `${APP_BASE}${path}`;
-
   currentNote = fullPath;
   breadcrumbs = parsePathToCrumbs(fullPath);
-  const loadedContent = storage.get(fullPath) || '';
-  _editor.value = loadedContent;
-  updateBreadcrumbs();
-  _update();
-  _ensurePreview();
-  _checkPushStatus();
-  _checkCurrentNote();
+  const content = storage.get(fullPath) || '';
+  return { path: fullPath, content, breadcrumbs };
 }
 
 export function navigateToIndex(index) {
   breadcrumbs = breadcrumbs.slice(0, index + 1);
-  switchNote(breadcrumbs[index].path);
-}
-
-export function updateBreadcrumbs() {
-  const header = document.querySelector('header strong');
-
-  header.innerHTML = breadcrumbs.map((crumb, index) => {
-    if (index === breadcrumbs.length - 1) {
-      return `<span>${crumb.name}</span>`;
-    }
-    return `<a href="${crumb.path}" onclick="navigateToIndex(${index}); return false;">${crumb.name}</a>`;
-  }).join(' &gt; ');
-
-  document.getElementById('rename-btn').onclick = () => {
-    renameNote(breadcrumbs[breadcrumbs.length - 1].path);
-  };
-
-  pushBreadcrumbsToURL(breadcrumbs);
+  return switchNote(breadcrumbs[index].path);
 }
 
 export function pushBreadcrumbsToURL(crumbs) {
@@ -78,18 +40,18 @@ export function pushBreadcrumbsToURL(crumbs) {
   }
 }
 
-export async function renameNote(oldPath) {
+export async function renameNote(oldPath, currentEditorValue) {
   const lastSlashIndex = oldPath.lastIndexOf('/');
-  if (lastSlashIndex === -1) return;
+  if (lastSlashIndex === -1) return null;
 
   const parentPath = oldPath.slice(0, lastSlashIndex);
   const oldName = oldPath.slice(lastSlashIndex + 1);
 
   const newName = prompt('名前を変更', oldName);
-  if (newName === null) return;
+  if (newName === null) return null;
 
   const trimmedNewName = newName.trim();
-  if (!trimmedNewName || trimmedNewName === oldName) return;
+  if (!trimmedNewName || trimmedNewName === oldName) return null;
 
   const newPath = `${parentPath}/${trimmedNewName}`;
 
@@ -98,10 +60,10 @@ export async function renameNote(oldPath) {
   );
   if (conflict) {
     alert(`すでに指定先の位置にノートが存在します: ${newPath}`);
-    return;
+    return null;
   }
 
-  storage.set(oldPath, _editor.value);
+  storage.set(oldPath, currentEditorValue);
 
   const allKeys = getAllNoteKeys();
 
@@ -145,7 +107,6 @@ export async function renameNote(oldPath) {
     localStorage.setItem('system_root_key', newPath);
   }
 
-  // サーバー側DBも oldPath → newPath に一括リネーム
   try {
     await fetch(`${API_BASE}/api/notes/rename`, {
       method: 'POST',
@@ -157,5 +118,5 @@ export async function renameNote(oldPath) {
     // オフライン時などは無視（次回 push 時に上書きされる）
   }
 
-  switchNote(newPath);
+  return newPath;
 }

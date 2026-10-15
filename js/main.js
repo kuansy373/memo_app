@@ -1,13 +1,15 @@
 import { APP_BASE, API_BASE } from './constants.js';
-import { COPY_ICON } from './svg.js';
-import { storage, getAllNoteKeys } from './storage.js';
+import { storage } from './storage.js';
 import { parseCustomMarkdown } from './parser.js';
 import { renderDiff } from './diff.js';
+import { applyTheme, syncThemeRadio } from './theme.js';
+import { copyCode } from './clipboard.js';
+import { handleInInput } from './inout.js';
+import { initNotes } from './initNotes.js';
 import {
-  rootNoteKey, currentNote, breadcrumbs,
-  initNavigation, parsePathToCrumbs,
+  rootNoteKey, currentNote,
   switchNote, navigateToIndex,
-  updateBreadcrumbs
+  pushBreadcrumbsToURL, renameNote,
 } from './navigation.js';
 
 // ----------------------------------------
@@ -50,37 +52,12 @@ async function checkAuth() {
 }
 
 // ----------------------------------------
-// Theme
-// ----------------------------------------
-
-function applyTheme(theme) {
-  const lightLink = document.getElementById('hljs-light');
-  const darkLink  = document.getElementById('hljs-dark');
-  const resolved =
-    theme === 'light' ? 'light' :
-    theme === 'dark'  ? 'dark'  :
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-  document.documentElement.setAttribute('data-theme', resolved);
-  lightLink.disabled = (resolved === 'dark');
-  darkLink.disabled  = (resolved === 'light');
-  localStorage.setItem('theme', theme);
-}
-
-function syncThemeRadio() {
-  const saved = localStorage.getItem('theme') ?? 'system';
-  preview.querySelectorAll('input[data-action="theme"]').forEach(radio => {
-    radio.checked = (radio.value === saved);
-  });
-}
-
-// ----------------------------------------
 // Preview
 // ----------------------------------------
 
 function update() {
   preview.innerHTML = parseCustomMarkdown(editor.value);
-  syncThemeRadio();
+  syncThemeRadio(preview);
 
   // @masks: 行クリックで行全体をトグル表示
   preview.querySelectorAll('.masks-row').forEach(row => {
@@ -146,12 +123,6 @@ function update() {
 }
 
 // ----------------------------------------
-// Navigation の初期化（依存注入）
-// ----------------------------------------
-
-initNavigation(editor, update, ensurePreview, checkCurrentNote, checkPushStatus);
-
-// ----------------------------------------
 // ヘルパー
 // ----------------------------------------
 
@@ -171,6 +142,65 @@ function saveCurrentNote() {
     storage.set(currentNote, editor.value);
   }
 }
+
+// ----------------------------------------
+// ノート切り替え
+// ----------------------------------------
+
+function applyNoteSwitch(path) {
+  const { content, breadcrumbs: newCrumbs } = switchNote(path);
+  editor.value = content;
+  renderBreadcrumbs(newCrumbs);
+  update();
+  ensurePreview();
+  checkPushStatus();
+  checkCurrentNote();
+}
+
+function applyNavigateToIndex(index) {
+  const { content, breadcrumbs: newCrumbs } = navigateToIndex(index);
+  editor.value = content;
+  renderBreadcrumbs(newCrumbs);
+  update();
+  ensurePreview();
+  checkPushStatus();
+  checkCurrentNote();
+}
+
+// ----------------------------------------
+// Breadcrumbs
+// ----------------------------------------
+
+function renderBreadcrumbs(crumbs) {
+  const header = document.querySelector('header strong');
+
+  header.innerHTML = crumbs.map((crumb, index) => {
+    if (index === crumbs.length - 1) {
+      return `<span>${crumb.name}</span>`;
+    }
+    return `<a href="${crumb.path}" data-crumb-index="${index}">${crumb.name}</a>`;
+  }).join(' &gt; ');
+
+  document.getElementById('rename-btn').onclick = () => {
+    handleRename(crumbs[crumbs.length - 1].path);
+  };
+
+  pushBreadcrumbsToURL(crumbs);
+}
+
+async function handleRename(oldPath) {
+  const newPath = await renameNote(oldPath, editor.value);
+  if (newPath !== null) {
+    applyNoteSwitch(newPath);
+  }
+}
+
+document.querySelector('header').addEventListener('click', e => {
+  const link = e.target.closest('a[data-crumb-index]');
+  if (!link) return;
+  e.preventDefault();
+  applyNavigateToIndex(Number(link.dataset.crumbIndex));
+});
 
 // ----------------------------------------
 // Mode toggle
@@ -224,38 +254,10 @@ function togglePane() {
 // Init
 // ----------------------------------------
 
-if (localStorage.getItem('note:' + rootNoteKey) === null) {
-  localStorage.setItem('note:' + rootNoteKey, `@alias r ${APP_BASE}root
-@lastPath -
-
-- [Markdown記法の一覧](r:/Markdown記法)
----
-- [設定](r:/settings)
-- [フォーム](r:/form)`
-  );
-}
-
-if (localStorage.getItem('note:' + APP_BASE + 'root/settings') === null) {
-  localStorage.setItem('note:' + APP_BASE + 'root/settings',
-    `テーマ
-
-<div class="theme-selector">
-  <label><input type="radio" name="theme" value="system"  data-action="theme" checked> システム</label>
-  <label><input type="radio" name="theme" value="light"   data-action="theme"> ライト</label>
-  <label><input type="radio" name="theme" value="dark"    data-action="theme"> ダーク</label>
-</div>`
-  );
-}
-
-if (localStorage.getItem('note:' + APP_BASE + 'root/form') === null) {
-  localStorage.setItem('note:' + APP_BASE + 'root/form',
-    '- [ログイン](' + API_BASE + '/auth/google)\n- [ログアウト](' + API_BASE + '/auth/logout)'
-  );
-}
+initNotes(rootNoteKey);
 
 // 起動時にテーマを適用
 applyTheme(localStorage.getItem('theme') ?? 'system');
-
 // システムテーマ変更を追跡
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if ((localStorage.getItem('theme') ?? 'system') === 'system') applyTheme('system');
@@ -267,7 +269,7 @@ function initFromURL() {
   const path = (fullPath.startsWith(APP_BASE) && !isBase)
     ? fullPath
     : rootNoteKey;
-  switchNote(path);
+  applyNoteSwitch(path);
 }
 
 // ----------------------------------------
@@ -277,7 +279,7 @@ function initFromURL() {
 window.addEventListener('popstate', () => {
   const fullPath = decodeURIComponent(location.pathname);
   if (!fullPath.startsWith(APP_BASE.slice(0, -1))) return;
-  switchNote(fullPath);
+  applyNoteSwitch(fullPath);
 });
 
 // ----------------------------------------
@@ -337,7 +339,7 @@ preview.addEventListener('click', e => {
   // アプリ内ノートへのリンク
   if (link.dataset.notePath !== undefined) {
     e.preventDefault();
-    switchNote(link.dataset.notePath);
+    applyNoteSwitch(link.dataset.notePath);
     return;
   }
 
@@ -361,125 +363,8 @@ preview.addEventListener('click', e => {
 
 // @in の入力欄: Enter で @out の定義に従って本文へ反映
 preview.addEventListener('keydown', e => {
-  if (e.target.matches('.in-input')) handleInInput(e);
+  if (e.target.matches('.in-input')) handleInInput(e, editor, currentNote, update, checkPushStatus);
 });
-
-// ----------------------------------------
-// copy to clipboard
-// ----------------------------------------
-
-function copyCode(btn) {
-  const code = btn.nextElementSibling.querySelector('code').textContent;
-  navigator.clipboard.writeText(code).catch(() => {});
-
-  if (btn._copyTimer) clearTimeout(btn._copyTimer);
-
-  btn.innerHTML = '✓';
-  btn.classList.add('copied');
-
-  btn._copyTimer = setTimeout(() => {
-    btn.innerHTML = COPY_ICON;
-    btn.classList.remove('copied');
-    btn._copyTimer = null;
-  }, 2000);
-}
-
-// ----------------------------------------
-// in/out input handler
-// ----------------------------------------
-
-function handleInInput(event) {
-  if (event.key !== 'Enter') return;
-  if (document.querySelector('.btn-toggle').style.display === 'none') return;
-
-  const raw = event.target.value.trim();
-  if (!raw) return;
-
-  const varNames = event.target.dataset.vars.split('\t');
-  const seps = JSON.parse(event.target.dataset.seps || '[]');
-
-  function splitBySeps(str, separators) {
-    if (separators.length === 0) return str.split(/\s+/);
-    const result = [];
-    let remaining = str;
-    while (remaining.length > 0) {
-      let matchIdx = -1;
-      let matchSep = null;
-      for (const sep of separators) {
-        const idx = remaining.indexOf(sep);
-        if (idx !== -1 && (matchIdx === -1 || idx < matchIdx)) {
-          matchIdx = idx;
-          matchSep = sep;
-        }
-      }
-      if (matchIdx === -1) { result.push(remaining); break; }
-      result.push(remaining.slice(0, matchIdx));
-      remaining = remaining.slice(matchIdx + matchSep.length);
-    }
-    return result;
-  }
-
-  const values = splitBySeps(raw, seps);
-
-  const replaceData = event.target.dataset.replace || '';
-  const replaceRules = replaceData ? JSON.parse(replaceData) : [];
-
-  function applyReplace(str) {
-    let result = str;
-    for (const [from, to] of replaceRules) {
-      result = result.replaceAll(from, to);
-    }
-    return result;
-  }
-
-  const bindings = {};
-  varNames.forEach((name, idx) => {
-    bindings[name] = applyReplace(values[idx] ?? '');
-  });
-
-  const lines = editor.value.split('\n');
-  const outLineIndex = lines.findIndex(line => {
-    const t = line.trim();
-    if (!t.startsWith('@out<<') || !t.endsWith(';')) return false;
-    return varNames.some(name => t.includes(name));
-  });
-
-  if (outLineIndex === -1) return;
-
-  const outBody = lines[outLineIndex].trim().slice('@out<<'.length, -1);
-  const tokens = outBody.split('<<');
-  let output = '';
-  let appendNewline = false;
-  for (const token of tokens) {
-    const t = token.trim();
-    if (t === "'\\n'") {
-      appendNewline = true;
-    } else if (t.startsWith('"') && t.endsWith('"')) {
-      output += t.slice(1, -1).replace(/(\\+)n/g, (_, slashes) => {
-        const half = Math.floor(slashes.length / 2);
-        return '\\'.repeat(half) + (slashes.length % 2 === 1 ? '\n' : 'n');
-      });
-    } else if (bindings[t] !== undefined) {
-      output += bindings[t];
-    }
-  }
-
-  if (appendNewline) {
-    lines.splice(outLineIndex, 0, output);
-  } else {
-    if (outLineIndex > 0) {
-      lines[outLineIndex - 1] += output;
-    } else {
-      lines.splice(outLineIndex, 0, output);
-    }
-  }
-  editor.value = lines.join('\n');
-  storage.set(currentNote, editor.value);
-  update();
-  checkPushStatus();
-
-  event.target.value = '';
-}
 
 // ----------------------------------------
 // Push / Pull
@@ -683,8 +568,6 @@ async function showPullDiff() {
 // グローバル公開（HTML の onclick から呼ばれる関数）
 // ----------------------------------------
 
-window.switchNote = switchNote;
-window.navigateToIndex = navigateToIndex;
 window.togglePane = togglePane;
 window.push = push;
 window.pull = pullCurrentNote;
