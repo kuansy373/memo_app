@@ -11,6 +11,11 @@ import {
   switchNote, navigateToIndex,
   pushBreadcrumbsToURL, renameNote,
 } from './navigation.js';
+import {
+  currentMode, setCurrentMode,
+  preDiffMode, setPreDiffMode,
+  lastSyncedMap, pullNotes,
+} from './state.js';
 
 // ----------------------------------------
 // DOM
@@ -26,11 +31,6 @@ const preview = document.getElementById('preview');
 if (localStorage.getItem('system_root_key') === null) {
   localStorage.setItem('system_root_key', `${APP_BASE}root`);
 }
-
-let currentMode = 'preview';
-let preDiffMode = 'preview'; // diff に入る直前のモードを記憶（戻り先として使う）
-const lastSyncedMap = new Map(); // path → サーバー確認済みの内容（書き込みは checkCurrentNote / push / pull のみ）
-const pullNotes = new Set();
 
 // ----------------------------------------
 // 認証状態チェック
@@ -228,7 +228,7 @@ function ensurePreview() {
 function togglePane() {
   if (currentMode === 'diff') {
     exitDiff(); // diff モード中はまず preDiffMode に戻し、
-    currentMode = currentMode === 'edit' ? 'preview' : 'edit'; // その後にトグル
+    setCurrentMode(currentMode === 'edit' ? 'preview' : 'edit'); // その後にトグル
     applyModeClass();
     updateModeLabel();
     updateModeIcon();
@@ -240,7 +240,7 @@ function togglePane() {
   if (nextMode === 'edit' && pullNotes.has(currentNote)) {
     return;
   }
-  currentMode = nextMode;
+  setCurrentMode(nextMode);
   applyModeClass();
   updateModeLabel();
   updateModeIcon();
@@ -466,7 +466,7 @@ async function pullCurrentNote() {
       setVisible('cancel-pull-btn', false);
       editor.value = content;
       if (wasDiff) {
-        currentMode = 'preview';
+        setCurrentMode('preview');
         applyModeClass();
         update();
         updateModeLabel();
@@ -494,7 +494,7 @@ async function push() {
   lastSyncedMap.set(note, content); // ノートごとに最後の同期内容を更新
   if (note === currentNote) {
     if (wasDiff) {
-      currentMode = 'preview';
+      setCurrentMode('preview');
       applyModeClass();
       update();
       updateModeLabel();
@@ -509,16 +509,16 @@ async function push() {
 
 // diff モードに入る共通処理
 function enterDiff(oldText, newText) {
-  preDiffMode = currentMode; // 戻り先を記憶（edit / preview）
+  setPreDiffMode(currentMode); // 戻り先を記憶（edit / preview）
   preview.innerHTML = renderDiff(oldText, newText);
-  currentMode = 'diff';
+  setCurrentMode('diff');
   applyModeClass();
   updateModeLabel();
 }
 
 // diff モードから抜ける（入る前のモードに戻る）
 function exitDiff() {
-  currentMode = preDiffMode;
+  setCurrentMode(preDiffMode);
   applyModeClass();
   if (currentMode === 'preview') update();
   updateModeLabel();
