@@ -28,14 +28,6 @@ const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
 
 // ----------------------------------------
-// State
-// ----------------------------------------
-
-if (localStorage.getItem('system_root_key') === null) {
-  localStorage.setItem('system_root_key', `${APP_BASE}root`);
-}
-
-// ----------------------------------------
 // Preview
 // ----------------------------------------
 

@@ -1,6 +1,10 @@
 import { APP_BASE, API_BASE } from './constants.js';
 
 export function initNotes(rootNoteKey) {
+  if (localStorage.getItem('system_root_key') === null) {
+    localStorage.setItem('system_root_key', `${APP_BASE}root`);
+  }
+
   if (localStorage.getItem('note:' + rootNoteKey) === null) {
     localStorage.setItem('note:' + rootNoteKey, `@alias r ${APP_BASE}root
 @lastPath -
