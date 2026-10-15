@@ -207,8 +207,7 @@ export function showPushDiff() {
 export function cancelPull() {
   pullNotes.delete(currentNote);
   _setVisible('cancel-pull-btn', false);
-  const local = _editor.value;
-  _preview.innerHTML = renderDiff(local, local);
+  exitDiff();
   checkPushStatus();
 }
 
