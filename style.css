@@ -444,7 +444,6 @@ textarea {
   color: transparent;
   background-color: currentColor;
   border-radius: 3px;
-  user-select: none;
 }
 /* 列ホバーで列全体表示 */
 #preview .mask-cell.revealed {
@@ -463,7 +462,6 @@ textarea {
   color: transparent;
   background-color: transparent;
   border-radius: 3px;
-  user-select: none;
 }
 #preview .masks-cell a svg { display: none; }
 

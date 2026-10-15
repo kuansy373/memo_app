@@ -34,69 +34,72 @@ const preview = document.getElementById('preview');
 function update() {
   preview.innerHTML = parseCustomMarkdown(editor.value);
   syncThemeRadio(preview);
-
-  // @masks: 行クリックで行全体をトグル表示
-  preview.querySelectorAll('.masks-row').forEach(row => {
-    row.addEventListener('click', () => {
-      row.classList.toggle('revealed');
-    });
-
-    // masks-cell 内のリンク・画像クリックを行トグルに伝播
-    // ※ 行リスナーとの組み合わせ（バブリングによる重複を含む）は CSS と合わせて意図した挙動。変更しないこと。
-    row.querySelectorAll('.masks-cell a, .masks-cell a img').forEach(el => {
-      el.addEventListener('click', () => {
-        row.classList.toggle('revealed');
-      });
-    });
-  });
-
-  // @hide: hide-col セル自体をクリックでトグル（行位置を維持）
-  preview.querySelectorAll('.hide-col').forEach(cell => {
-    cell.addEventListener('click', () => {
-      const colClass = [...cell.classList].find(c => c.startsWith('hide-col-'));
-      if (!colClass) return;
-      const row = cell.closest('tr');
-      const rowTop = row.getBoundingClientRect().top;
-      const table = cell.closest('table');
-      table.querySelectorAll(`.${colClass}`).forEach(c => {
-        c.classList.toggle('revealed');
-      });
-      const newRowTop = row.getBoundingClientRect().top;
-      preview.scrollTop += newRowTop - rowTop;
-    });
-  });
-
-  // @mask: 列セルにホバーで列全体を表示、列から離れたら隠す
-  preview.querySelectorAll('table').forEach(table => {
-    let activeColClass = null;
-
-    table.addEventListener('mouseover', e => {
-      const cell = e.target.closest('td');
-      const colClass = cell && [...cell.classList].find(c => c.startsWith('mask-col-'));
-
-      if (colClass === activeColClass) return;
-
-      // 前の列を隠す
-      if (activeColClass) {
-        table.querySelectorAll(`.${activeColClass}`).forEach(c => c.classList.remove('revealed'));
-      }
-
-      // 新しい列を表示
-      if (colClass) {
-        table.querySelectorAll(`.${colClass}`).forEach(c => c.classList.add('revealed'));
-      }
-
-      activeColClass = colClass || null;
-    });
-
-    table.addEventListener('mouseleave', () => {
-      if (activeColClass) {
-        table.querySelectorAll(`.${activeColClass}`).forEach(c => c.classList.remove('revealed'));
-        activeColClass = null;
-      }
-    });
-  });
 }
+
+// ----------------------------------------
+// Preview イベント委譲
+// ----------------------------------------
+
+// @masks: 行クリックで行全体をトグル表示
+// masks-cell 内のリンク・画像クリックも行トグルに伝播させる
+// ※ 行リスナーとの組み合わせ（バブリングによる重複を含む）は CSS と合わせて意図した挙動。変更しないこと。
+preview.addEventListener('click', e => {
+  const row = e.target.closest('.masks-row');
+  if (!row) return;
+  // リンク・画像からのバブリングも含め、常に行全体をトグル
+  row.classList.toggle('revealed');
+});
+
+// @hide: hide-col セル自体をクリックでトグル（行位置を維持）
+preview.addEventListener('click', e => {
+  const cell = e.target.closest('.hide-col');
+  if (!cell) return;
+  if (window.getSelection().toString().length > 0) return;
+  const colClass = [...cell.classList].find(c => c.startsWith('hide-col-'));
+  if (!colClass) return;
+  const row = cell.closest('tr');
+  const rowTop = row.getBoundingClientRect().top;
+  const table = cell.closest('table');
+  table.querySelectorAll(`.${colClass}`).forEach(c => {
+    c.classList.toggle('revealed');
+  });
+  const newRowTop = row.getBoundingClientRect().top;
+  preview.scrollTop += newRowTop - rowTop;
+});
+
+// @mask: 列セルにホバーで列全体を表示、列から離れたら隠す
+// テーブルごとに activeColClass を管理するため WeakMap を使用
+const maskTableState = new WeakMap();
+
+preview.addEventListener('mouseover', e => {
+  const table = e.target.closest('table');
+  if (!table) return;
+  const cell = e.target.closest('td');
+  const colClass = cell && [...cell.classList].find(c => c.startsWith('mask-col-'));
+  const activeColClass = maskTableState.get(table) ?? null;
+
+  if (colClass === activeColClass) return;
+
+  // 前の列を隠す
+  if (activeColClass) {
+    table.querySelectorAll(`.${activeColClass}`).forEach(c => c.classList.remove('revealed'));
+  }
+  // 新しい列を表示
+  if (colClass) {
+    table.querySelectorAll(`.${colClass}`).forEach(c => c.classList.add('revealed'));
+  }
+  maskTableState.set(table, colClass || null);
+});
+
+preview.addEventListener('mouseleave', e => {
+  const table = e.target.closest('table');
+  if (!table) return;
+  const activeColClass = maskTableState.get(table) ?? null;
+  if (activeColClass) {
+    table.querySelectorAll(`.${activeColClass}`).forEach(c => c.classList.remove('revealed'));
+    maskTableState.set(table, null);
+  }
+}, true); // キャプチャフェーズで table の mouseleave を確実に拾う
 
 // ----------------------------------------
 // ヘルパー
