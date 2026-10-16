@@ -81,10 +81,14 @@ export function parseCustomMarkdown(text) {
           url = aliases[aliasMatch[1]] + aliasMatch[2];
         }
 
-        const isSameApp = url.startsWith(APP_BASE) || url.startsWith(`${location.origin}${APP_BASE}`);
-        if (isSameApp) {
-          const fullUrl = url.startsWith('http') ? url : `${location.origin}${url}`;
-          const rawPath = fullUrl.slice(location.origin.length);
+        if (!url.startsWith('http') && url.startsWith('/')) {
+          url = APP_BASE + url.slice(1);
+        }
+
+        const rawPath = url.startsWith(`${location.origin}${APP_BASE}`)
+          ? url.slice(location.origin.length)
+          : url.startsWith(APP_BASE) ? url : null;
+        if (rawPath !== null) {
           let label = text;
           if (lastPathPlaceholder && text === lastPathPlaceholder) {
             label = rawPath.split('/').filter(Boolean).pop() || rawPath;
