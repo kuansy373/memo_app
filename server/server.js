@@ -179,7 +179,7 @@ app.post('/api/notes/rename', requireAuth, async (req, res) => {
   }
 
   // oldPath 自身と、oldPath/ で始まる子ノート全てを対象に UPDATE
-  // 例: /root/old → /root/new, /root/old/child → /root/new/child
+  // 例: /home/old → /home/new, /home/old/child → /home/new/child
   const result = await pool.query(
     `UPDATE notes
      SET path = $2 || substring(path from length($1) + 1),

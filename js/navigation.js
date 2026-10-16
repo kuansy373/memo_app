@@ -2,8 +2,8 @@ import { APP_BASE, API_BASE } from './constants.js';
 import { storage, getAllNoteKeys } from './storage.js';
 import { parseAliases } from './parser.js';
 
-export let rootNoteKey = localStorage.getItem('system_root_key') || `${APP_BASE}root`;
-export let currentNote = rootNoteKey;
+export let initialNoteKey = localStorage.getItem('system_initial_note') || `${APP_BASE}initial`;
+export let currentNote = initialNoteKey;
 export let breadcrumbs = [];
 
 export function parsePathToCrumbs(fullPath) {
@@ -102,9 +102,9 @@ export async function renameNote(oldPath, currentEditorValue) {
       storage.remove(key);
     });
 
-  if (oldPath === rootNoteKey) {
-    rootNoteKey = newPath;
-    localStorage.setItem('system_root_key', newPath);
+  if (oldPath === initialNoteKey) {
+    initialNoteKey = newPath;
+    localStorage.setItem('system_initial_note', newPath);
   }
 
   try {

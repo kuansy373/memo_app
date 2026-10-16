@@ -7,7 +7,7 @@ import { handleInInput } from './inout.js';
 import { initNotes } from './initNotes.js';
 import { currentMode, setCurrentMode, pullNotes } from './state.js';
 import {
-  rootNoteKey, currentNote,
+  initialNoteKey, currentNote,
   switchNote, navigateToIndex,
   pushBreadcrumbsToURL, renameNote,
 } from './navigation.js';
@@ -231,7 +231,7 @@ function togglePane() {
 // Init
 // ----------------------------------------
 
-initNotes(rootNoteKey);
+initNotes(initialNoteKey);
 initSync({ editor, preview, update, applyModeClass, updateModeLabel, setVisible });
 
 // 起動時にテーマを適用
@@ -246,7 +246,7 @@ function initFromURL() {
   const isBase = fullPath === APP_BASE.slice(0, -1) || fullPath === APP_BASE;
   const path = (fullPath.startsWith(APP_BASE) && !isBase)
     ? fullPath
-    : rootNoteKey;
+    : initialNoteKey;
   applyNoteSwitch(path);
 }
 
