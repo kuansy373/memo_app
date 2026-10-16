@@ -136,14 +136,8 @@ export async function pullCurrentNote() {
     if (note === currentNote) {
       _setVisible('cancel-pull-btn', false);
       _editor.value = content;
-      if (wasDiff) {
-        setCurrentMode('preview');
-        _applyModeClass();
-        _update();
-        _updateModeLabel();
-      } else {
-        _update();
-      }
+      if (wasDiff) exitDiff('preview')
+      else _update();
     }
     pullNotes.delete(note);
     if (note === currentNote) {
@@ -164,12 +158,7 @@ export async function push() {
   });
   lastSyncedMap.set(note, content);
   if (note === currentNote) {
-    if (wasDiff) {
-      setCurrentMode('preview');
-      _applyModeClass();
-      _update();
-      _updateModeLabel();
-    }
+    if (wasDiff) exitDiff('preview');
     checkPushStatus();
   }
 }
@@ -186,8 +175,8 @@ export function enterDiff(oldText, newText) {
   _updateModeLabel();
 }
 
-export function exitDiff() {
-  setCurrentMode(preDiffMode);
+export function exitDiff(overrideMode = null) {
+  setCurrentMode(overrideMode ?? preDiffMode);
   _applyModeClass();
   if (currentMode === 'preview') _update();
   _updateModeLabel();
