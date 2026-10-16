@@ -128,21 +128,24 @@ function saveCurrentNote() {
 
 function applyNoteSwitch(path) {
   const { content, breadcrumbs: newCrumbs } = switchNote(path);
-  editor.value = content;
-  renderBreadcrumbs(newCrumbs);
-  update();
-  ensurePreview();
-  checkPushStatus();
-  checkCurrentNote();
+  _applyNoteSwitchResult(content, newCrumbs);
 }
 
 function applyNavigateToIndex(index) {
   const { content, breadcrumbs: newCrumbs } = navigateToIndex(index);
+  _applyNoteSwitchResult(content, newCrumbs);
+}
+
+function _applyNoteSwitchResult(content, newCrumbs) {
   editor.value = content;
   renderBreadcrumbs(newCrumbs);
-  update();
-  ensurePreview();
-  checkPushStatus();
+  if (currentMode === 'diff') {
+    exitDiff('preview');
+  } else {
+    update();
+    if (currentMode === 'edit') togglePane();
+    checkPushStatus();
+  }
   checkCurrentNote();
 }
 
@@ -197,11 +200,6 @@ function updateModeIcon() {
     icon.classList.toggle('btn-icon--book', currentMode === 'edit');
     icon.alt = currentMode === 'edit' ? 'プレビュー' : '編集';
   });
-}
-
-function ensurePreview() {
-  if (currentMode === 'edit') togglePane();
-  // diff モード中はそのまま維持
 }
 
 function togglePane() {
