@@ -110,8 +110,11 @@ export function parseCustomMarkdown(text) {
     return s;
   }
 
+  let savedList = null;
+
   function closeList() {
     if (!inList) return;
+    savedList = inList.map(item => ({ ...item }));
     while (inList.length > 0) {
       parts.push(`</${inList.pop().type}>`);
     }
@@ -362,6 +365,37 @@ export function parseCustomMarkdown(text) {
       continue;
     }
 
+    const caretMatch = line.match(/^\^(\s*)([-*+]|\d+\.)\s(.*)/);
+    if (caretMatch && savedList) {
+      // ^ をスペース1文字に置き換えてインデント深さを計算する
+      const depth = Math.floor((1 + caretMatch[1].length) / 2);
+      const type = /\d+\./.test(caretMatch[2]) ? 'ol' : 'ul';
+      const num = type === 'ol' ? parseInt(caretMatch[2], 10) : null;
+      const content = caretMatch[3];
+      // savedList のうち ^ 行の深さ以下の階層だけ復元して開きタグを再出力する
+      inList = savedList.filter(item => item.depth <= depth).map(item => ({ ...item }));
+      for (const item of inList) {
+        parts.push(item.type === 'ol' ? `<ol start="${item.nextNum}">` : '<ul>');
+      }
+      savedList = null;
+      const current = inList[inList.length - 1];
+      if (!current) {
+        openList(type, num);
+        inList.push({ type, depth, nextNum: num != null ? num + 1 : null });
+      } else if (current.depth === depth) {
+        // 復元済みのため何もしない
+      } else if (depth > current.depth) {
+        openList(type, num);
+        inList.push({ type, depth, nextNum: num != null ? num + 1 : null });
+      } else {
+        while (inList.length > 1 && inList[inList.length - 1].depth > depth) {
+          parts.push(`</${inList.pop().type}>`);
+        }
+      }
+      parts.push(`<li class="list-depth-${depth % 2}">${parseInline(content)}</li>`);
+      i++; continue;
+    }
+
     const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s(.*)/);
     if (listMatch) {
       const depth = Math.floor(listMatch[1].length / 2);
@@ -370,13 +404,14 @@ export function parseCustomMarkdown(text) {
       const content = listMatch[3];
 
       if (!inList) {
+        savedList = null; // 通常リスト開始時にリセット
         openList(type, num);
-        inList = [{ type, depth }];
+        inList = [{ type, depth, nextNum: num != null ? num + 1 : null }];
       } else {
         const current = inList[inList.length - 1];
         if (depth > current.depth) {
           openList(type, num);
-          inList.push({ type, depth });
+          inList.push({ type, depth, nextNum: num != null ? num + 1 : null });
         } else if (depth < current.depth) {
           while (inList.length > 1 && inList[inList.length - 1].depth > depth) {
             parts.push(`</${inList.pop().type}>`);
@@ -384,13 +419,18 @@ export function parseCustomMarkdown(text) {
           if (inList[inList.length - 1].type !== type) {
             parts.push(`</${inList.pop().type}>`);
             openList(type, num);
-            inList.push({ type, depth });
+            inList.push({ type, depth, nextNum: num != null ? num + 1 : null });
           }
         } else {
           if (current.type !== type) {
             parts.push(`</${inList.pop().type}>`);
             openList(type, num);
-            inList.push({ type, depth });
+            inList.push({ type, depth, nextNum: num != null ? num + 1 : null });
+          } else {
+            // 同じ階層・同じタイプに li を追加する場合のみインクリメント
+            if (inList[inList.length - 1].type === 'ol') {
+              inList[inList.length - 1].nextNum++;
+            }
           }
         }
       }
