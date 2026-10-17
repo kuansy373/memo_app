@@ -159,7 +159,8 @@ export function parseCustomMarkdown(text) {
         return parseCustomMarkdown(sec.join('\n'));
       }
       const hasNested = sec.some(l => l.startsWith('> ') || l.trim() === '>');
-      return hasNested
+      const hasList = sec.some(l => /^(\s*)([-*+]|\d+\.)\s/.test(l));
+      return hasNested || hasList
         ? parseCustomMarkdown(sec.join('\n'))
         : sec.map(l => `<p>${parseInline(l)}</p>`).join('');
     }).join('');
