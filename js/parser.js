@@ -128,8 +128,21 @@ export function parseCustomMarkdown(text) {
   function renderLines(bodyLines, fullParse) {
     const sections = [];
     let cur = [];
+    let inFence = false;
+    let fenceStr = '';
     for (const l of bodyLines) {
-      if (l.trim() === '') {
+      // コードフェンスの開閉を追跡する
+      const fenceMatch = l.trim().match(/^(`{3,}|~{3,})/);
+      if (fenceMatch) {
+        if (!inFence) {
+          inFence = true;
+          fenceStr = fenceMatch[1][0].repeat(fenceMatch[1].length);
+        } else if (l.trim() === fenceStr) {
+          inFence = false;
+          fenceStr = '';
+        }
+      }
+      if (!inFence && l.trim() === '') {
         if (cur.length) { sections.push(cur); cur = []; }
         sections.push(null); // null = 空行マーカー
       } else {
