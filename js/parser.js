@@ -44,12 +44,85 @@ export function parseAliases(text) {
   return aliases;
 }
 
-export function parseCustomMarkdown(text) {
-  const lines = text.split('\n');
-  const parts = [];
-  let i = 0;
-  let inList = null;
+function _parseInline(s, aliases, lastPathPlaceholder) {
+  const codes = [];
 
+  s = s.replace(/(`{2,})(.+?)\1|`([^`]+)`/gs, (_, fence, code, single) => {
+    const raw = fence ? code.trim() : single;
+    codes.push(`<code>${escapeHtml(raw)}</code>`);
+    return `\x00${codes.length - 1}\x00`;
+  });
+
+  s = s
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+
+    .replace(/\[([^\]]*)\]\(([^)]*)\)/g, (_, text, url) => {
+      if (!url) return text;
+
+      const aliasMatch = url.match(/^([^:]+):(.+)/);
+      if (aliasMatch && aliases[aliasMatch[1]]) {
+        url = aliases[aliasMatch[1]] + aliasMatch[2];
+      }
+
+      if (!url.startsWith('http') && url.startsWith('/')) {
+        url = APP_BASE + url.slice(1);
+      }
+
+      const rawPath = url.startsWith(`${location.origin}${APP_BASE}`)
+        ? url.slice(location.origin.length)
+        : url.startsWith(APP_BASE) ? url : null;
+      if (rawPath !== null) {
+        let label = text;
+        if (lastPathPlaceholder && text === lastPathPlaceholder) {
+          label = rawPath.split('/').filter(Boolean).pop() || rawPath;
+        }
+        return `<a href="${escapeAttr(rawPath)}" data-note-path="${escapeAttr(rawPath)}">${label || rawPath}</a>`;
+      }
+
+      if (!/^https?:\/\//.test(url)) {
+        return text || url;
+      }
+
+      const label = text ? `${text}${LINK_ICON}` : LINK_ICON;
+      return `<a href="${escapeAttr(url)}" target="_blank">${label}</a>`;
+    });
+
+  s = s.replace(/~~(.+?)~~/gs, '<s>$1</s>');
+  s = s.replace(/\x00(\d+)\x00/g, (_, idx) => codes[idx]);
+
+  return s;
+}
+
+// コードフェンスの開閉状態を一行ずつ更新するユーティリティ。
+// state = { inFence: bool, fenceStr: string } を受け取って変更し、
+// 変更後の状態を返す（呼び出し側は同じオブジェクトを使い回す）。
+function updateFenceState(line, state) {
+  const m = line.trim().match(/^(`{3,}|~{3,})/);
+  if (!m) return state;
+  if (!state.inFence) {
+    state.inFence = true;
+    state.fenceStr = m[1][0].repeat(m[1].length);
+  } else if (line.trim() === state.fenceStr) {
+    state.inFence = false;
+    state.fenceStr = '';
+  }
+  return state;
+}
+
+// lines[startIdx] がコードフェンス開始行のとき、対応する閉じ行のインデックスを返す。
+// 見つからなければ -1。
+function findClosingFence(lines, startIdx) {
+  const fence = lines[startIdx].trim().match(/^(`+)/)?.[1];
+  if (!fence) return -1;
+  for (let j = startIdx + 1; j < lines.length; j++) {
+    if (lines[j].trim() === fence) return j;
+  }
+  return -1;
+}
+
+function parseFrontmatter(lines) {
   const aliases = {};
   let lastPathPlaceholder = null;
   for (const line of lines) {
@@ -58,56 +131,19 @@ export function parseCustomMarkdown(text) {
     const p = line.match(/^@lastPath\s+(\S+)/);
     if (p) lastPathPlaceholder = p[1];
   }
+  return { aliases, lastPathPlaceholder };
+}
+
+export function parseCustomMarkdown(text) {
+  const lines = text.split('\n');
+  const parts = [];
+  let i = 0;
+  let inList = null;
+
+  const { aliases, lastPathPlaceholder } = parseFrontmatter(lines);
 
   function parseInline(s) {
-    const codes = [];
-
-    s = s.replace(/(`{2,})(.+?)\1|`([^`]+)`/gs, (_, fence, code, single) => {
-      const raw = fence ? code.trim() : single;
-      codes.push(`<code>${escapeHtml(raw)}</code>`);
-      return `\x00${codes.length - 1}\x00`;
-    });
-
-    s = s
-      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-
-      .replace(/\[([^\]]*)\]\(([^)]*)\)/g, (_, text, url) => {
-        if (!url) return text;
-
-        const aliasMatch = url.match(/^([^:]+):(.+)/);
-        if (aliasMatch && aliases[aliasMatch[1]]) {
-          url = aliases[aliasMatch[1]] + aliasMatch[2];
-        }
-
-        if (!url.startsWith('http') && url.startsWith('/')) {
-          url = APP_BASE + url.slice(1);
-        }
-
-        const rawPath = url.startsWith(`${location.origin}${APP_BASE}`)
-          ? url.slice(location.origin.length)
-          : url.startsWith(APP_BASE) ? url : null;
-        if (rawPath !== null) {
-          let label = text;
-          if (lastPathPlaceholder && text === lastPathPlaceholder) {
-            label = rawPath.split('/').filter(Boolean).pop() || rawPath;
-          }
-          return `<a href="${escapeAttr(rawPath)}" data-note-path="${escapeAttr(rawPath)}">${label || rawPath}</a>`;
-        }
-
-        if (!/^https?:\/\//.test(url)) {
-          return text || url;
-        }
-
-        const label = text ? `${text}${LINK_ICON}` : LINK_ICON;
-        return `<a href="${escapeAttr(url)}" target="_blank">${label}</a>`;
-      });
-
-    s = s.replace(/~~(.+?)~~/gs, '<s>$1</s>');
-    s = s.replace(/\x00(\d+)\x00/g, (_, idx) => codes[idx]);
-
-    return s;
+    return _parseInline(s, aliases, lastPathPlaceholder);
   }
 
   let savedList = null;
@@ -131,21 +167,10 @@ export function parseCustomMarkdown(text) {
   function renderLines(bodyLines, fullParse) {
     const sections = [];
     let cur = [];
-    let inFence = false;
-    let fenceStr = '';
+    const fenceState = { inFence: false, fenceStr: '' };
     for (const l of bodyLines) {
-      // コードフェンスの開閉を追跡する
-      const fenceMatch = l.trim().match(/^(`{3,}|~{3,})/);
-      if (fenceMatch) {
-        if (!inFence) {
-          inFence = true;
-          fenceStr = fenceMatch[1][0].repeat(fenceMatch[1].length);
-        } else if (l.trim() === fenceStr) {
-          inFence = false;
-          fenceStr = '';
-        }
-      }
-      if (!inFence && l.trim() === '') {
+      updateFenceState(l, fenceState);
+      if (!fenceState.inFence && l.trim() === '') {
         if (cur.length) { sections.push(cur); cur = []; }
         sections.push(null); // null = 空行マーカー
       } else {
@@ -179,11 +204,13 @@ export function parseCustomMarkdown(text) {
     if (trimmed.startsWith('@lastPath')) { i++; continue; }
 
     // @in"sep">>var1>>var2; または @in'sep'>>var1>>var2; 構文
-    const inMatch = trimmed.match(/^@in((?:["'][^"']*["'],)*(?:["'][^"']*["']))?((?:>>[^>]+)+);$/);
+    const inMatch = trimmed.match(
+      /^@in(?<seps>(?:["'][^"']*["'],)*(?:["'][^"']*["']))?(?<vars>(?:>>[^>]+)+);$/
+    );
     if (inMatch) {
       closeList();
-      const varNames = inMatch[2].split('>>').filter(Boolean);
-      const sepRaw = inMatch[1] || '';
+      const varNames = inMatch.groups.vars.split('>>').filter(Boolean);
+      const sepRaw = inMatch.groups.seps || '';
       const useSingleQuote = sepRaw.startsWith("'");
       const quoteChar = useSingleQuote ? "'" : '"';
       const sepRegex = new RegExp(`${quoteChar}([^${quoteChar}]*)${quoteChar}`, 'g');
@@ -223,11 +250,12 @@ export function parseCustomMarkdown(text) {
       const rawHeaderCells = line.trim().slice(1, -1).split('|');
 
       // @mask / @masks / @hide の検出（複数指定可: @masks@hide）
+      // @masks を先に検査し、/@mask(?!s)/ で @masks への誤マッチを防ぐ。
       const maskCols = rawHeaderCells.map(cell => {
         const t = cell.trim();
-        const hasMasks = t.includes('@masks');
-        const hasMask  = !hasMasks && t.includes('@mask');
-        const hasHide  = t.includes('@hide');
+        const hasMasks = /@masks/.test(t);
+        const hasMask  = !hasMasks && /@mask(?!s)/.test(t);
+        const hasHide  = /@hide/.test(t);
         if (hasMasks && hasHide) return 'masks+hide';
         if (hasMasks) return 'masks';
         if (hasMask)  return 'mask';
@@ -238,10 +266,7 @@ export function parseCustomMarkdown(text) {
 
       parts.push('<table><thead><tr>');
       rawHeaderCells.forEach((cell, ci) => {
-        const t = cell.trim()
-          .replace(/@masks/g, '')
-          .replace(/@mask/g, '')
-          .replace(/@hide/g, '');
+        const t = cell.trim().replace(/@masks|@mask|@hide/g, '');
         const classes = [];
         if (maskCols[ci] === 'hide' || maskCols[ci] === 'masks+hide') classes.push(`hide-col hide-col-${ci}`);
         const cls = classes.length ? ` class="${classes.join(' ')}"` : '';
@@ -291,7 +316,7 @@ export function parseCustomMarkdown(text) {
       const rest = trimmed.slice(fence.length).trim();
       const isCodeFence = rest === '' || /^\w+$/.test(rest); // 言語指定のみ or 空
       if (isCodeFence) {
-        const closeIdx = lines.findIndex((l, j) => j > i && l.trim() === fence);
+        const closeIdx = findClosingFence(lines, i);
         if (closeIdx !== -1) {
           closeList();
           const lang = rest;
@@ -392,6 +417,7 @@ export function parseCustomMarkdown(text) {
           parts.push(`</${inList.pop().type}>`);
         }
       }
+      // depth % 2 → 偶数/奇数でスタイルをトグルする CSS クラス（0 or 1）
       parts.push(`<li class="list-depth-${depth % 2}">${parseInline(content)}</li>`);
       i++; continue;
     }
@@ -434,6 +460,7 @@ export function parseCustomMarkdown(text) {
           }
         }
       }
+      // depth % 2 → 偶数/奇数でスタイルをトグルする CSS クラス（0 or 1）
       parts.push(`<li class="list-depth-${depth % 2}">${parseInline(content)}</li>`);
       i++; continue;
     }
