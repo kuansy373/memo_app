@@ -17,6 +17,46 @@ function stripBlockquotePrefix(line) {
   return line.replace(/^ *> ?/, '');
 }
 
+// 行頭の > の個数（深さ）を返す。> のない行は -1。
+function blockquoteDepth(line) {
+  let d = 0;
+  let s = line;
+  while (s.startsWith('> ') || s === '>') {
+    d++;
+    s = s.startsWith('> ') ? s.slice(2) : '';
+  }
+  return d > 0 ? d - 1 : -1; // 0始まりの深さに変換
+}
+
+// [{depth, text}] を受け取り、ネストした <blockquote> HTML を返す。
+function renderDepthLines(depthLines, currentDepth) {
+  const parts = [];
+  let i = 0;
+  while (i < depthLines.length) {
+    const { depth } = depthLines[i];
+    if (depth === currentDepth) {
+      // 同じ深さの連続行をまとめて parseCustomMarkdown で処理
+      const block = [];
+      while (i < depthLines.length && depthLines[i].depth === currentDepth) {
+        block.push(depthLines[i].text);
+        i++;
+      }
+      parts.push(parseCustomMarkdown(block.join('\n')));
+    } else if (depth > currentDepth) {
+      // 再帰で <blockquote> にする
+      const nested = [];
+      while (i < depthLines.length && depthLines[i].depth > currentDepth) {
+        nested.push(depthLines[i]);
+        i++;
+      }
+      parts.push(`<blockquote>${renderDepthLines(nested, currentDepth + 1)}</blockquote>`);
+    } else {
+      break;
+    }
+  }
+  return parts.join('');
+}
+
 function isTableRow(line) {
   const t = line.trim();
   return t.startsWith('|') && t.endsWith('|');
@@ -194,8 +234,6 @@ export function parseCustomMarkdown(text) {
     }).join('');
   }
 
-  const renderBqLines = bqLines => renderLines(bqLines, false);
-
   while (i < lines.length) {
     const line = lines[i];
     const trimmed = line.trim();
@@ -344,8 +382,11 @@ export function parseCustomMarkdown(text) {
           const color = parseCalloutColor(type);
           i++;
           const bodyLines = [];
-          while (i < lines.length && isBlockquoteLine(lines[i])) {
-            bodyLines.push(stripBlockquotePrefix(lines[i]));
+          while (i < lines.length) {
+            const l = lines[i];
+            if (l.trim() === '') break;
+            // > あり行はプレフィックスを1段だけ剥がす。> なし行はそのまま。
+            bodyLines.push(isBlockquoteLine(l) ? stripBlockquotePrefix(l) : l);
             i++;
           }
           const body = renderLines(bodyLines, true);
@@ -378,15 +419,28 @@ export function parseCustomMarkdown(text) {
           continue;
         }
       }
-      // 連続する > 行 を一つの blockquote にする
-      const bqLines = [];
-      while (i < lines.length && isBlockquoteLine(lines[i])) {
-        bqLines.push(stripBlockquotePrefix(lines[i]));
+      // 連続する行を深さ付きで収集し、ネスト構造の <blockquote> を生成する。
+      const bqDepthLines = [];
+      let lastDepth = 0;
+      while (i < lines.length) {
+        const l = lines[i];
+        if (l.trim() === '') break;
+        const d = blockquoteDepth(l);
+        if (d >= 0) {
+          // > あり行：深さを更新し、> を全部剥がしたテキストを追加
+          lastDepth = d;
+          let text = l;
+          for (let k = 0; k <= d; k++) text = text.replace(/^ *> ?/, '');
+          bqDepthLines.push({ depth: d, text });
+        } else {
+          // > なし行：直前の深さを継承
+          bqDepthLines.push({ depth: lastDepth, text: l });
+        }
         i++;
       }
       // 末尾の空行を除去
-      while (bqLines.length > 0 && bqLines[bqLines.length - 1].trim() === '') bqLines.pop();
-      parts.push(`<blockquote>${renderBqLines(bqLines)}</blockquote>`);
+      while (bqDepthLines.length > 0 && bqDepthLines[bqDepthLines.length - 1].text.trim() === '') bqDepthLines.pop();
+      parts.push(`<blockquote>${renderDepthLines(bqDepthLines, 0)}</blockquote>`);
       continue;
     }
 
