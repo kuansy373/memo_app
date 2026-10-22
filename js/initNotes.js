@@ -17,12 +17,23 @@ export function initNotes(initialNoteKey) {
 
   if (localStorage.getItem('note:' + APP_BASE + 'settings') === null) {
     localStorage.setItem('note:' + APP_BASE + 'settings',
-      `テーマ
+      `**テーマ**
 
 <div class="theme-selector">
   <label><input type="radio" name="theme" value="system"  data-action="theme" checked> システム</label>
   <label><input type="radio" name="theme" value="light"   data-action="theme"> ライト</label>
   <label><input type="radio" name="theme" value="dark"    data-action="theme"> ダーク</label>
+</div>
+
+---
+
+**ショートカットキー**
+
+<div class="shortcut-setting" data-shortcut="togglePane">
+  <span class="shortcut-label">モード切替（プレビュー/編集）</span>
+  <input class="shortcut-input" type="text" readonly placeholder="(なし)">
+  <button data-action="shortcut-reset">既定値に戻す</button>
+  <button data-action="shortcut-clear">クリア</button>
 </div>`
     );
   }

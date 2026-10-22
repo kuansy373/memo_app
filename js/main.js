@@ -1,7 +1,8 @@
 import { APP_BASE, API_BASE } from './constants.js';
 import { storage } from './storage.js';
 import { parseCustomMarkdown } from './parser.js';
-import { applyTheme, syncThemeRadio } from './theme.js';
+import { applyTheme, syncThemeRadio } from './settings/theme.js';
+import { saveShortcut, clearShortcut, matchesShortcut, keyEventToString, syncShortcutUI } from './settings/shortcuts.js';
 import { copyCode } from './clipboard.js';
 import { handleInInput } from './inout.js';
 import { initNotes } from './initNotes.js';
@@ -34,6 +35,7 @@ const preview = document.getElementById('preview');
 function update() {
   preview.innerHTML = parseCustomMarkdown(editor.value);
   syncThemeRadio(preview);
+  syncShortcutUI(preview);
 }
 
 // ----------------------------------------
@@ -203,6 +205,8 @@ function updateModeIcon() {
 }
 
 function togglePane() {
+  if (document.querySelector('.btn-toggle').style.display === 'none') return;
+
   if (currentMode === 'diff') {
     exitDiff(); // diff モード中はまず preDiffMode に戻し、
     setCurrentMode(currentMode === 'edit' ? 'preview' : 'edit'); // その後にトグル
@@ -221,7 +225,9 @@ function togglePane() {
   applyModeClass();
   updateModeLabel();
   updateModeIcon();
-  if (currentMode === 'preview') {
+  if (currentMode === 'edit') {
+    editor.focus();
+  } else {
     update();
     checkPushStatus();
   }
@@ -337,6 +343,49 @@ preview.addEventListener('click', e => {
       alert('ログインしていないため、ログアウトできません。');
     }
   }
+});
+
+// キー入力でショートカット発火
+document.addEventListener('keydown', e => {
+  if (matchesShortcut(e, 'togglePane')) {
+    e.preventDefault();
+    togglePane();
+  }
+});
+
+// ショートカット入力欄: フォーカス中にキーを押して登録、Backspaceでクリア
+preview.addEventListener('keydown', e => {
+  const input = e.target.closest('.shortcut-input');
+  if (!input) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const setting = input.closest('.shortcut-setting');
+  const name = setting.dataset.shortcut;
+
+  if (e.key === 'Backspace') {
+    clearShortcut(name);
+  } else if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+    saveShortcut(name, keyEventToString(e));
+  }
+  syncShortcutUI(preview);
+});
+
+// クリア・既定値に戻すボタン
+preview.addEventListener('click', e => {
+  const btn = e.target.closest('[data-action="shortcut-clear"], [data-action="shortcut-reset"]');
+  if (!btn) return;
+
+  const setting = btn.closest('.shortcut-setting');
+  const name = setting.dataset.shortcut;
+
+  if (btn.dataset.action === 'shortcut-clear') {
+    clearShortcut(name);
+  } else {
+    localStorage.removeItem(`settings:shortcuts:${name}`); // DEFAULTSのフォールバックで既定値に戻る
+  }
+  syncShortcutUI(preview);
 });
 
 // @in の入力欄: Enter で @out の定義に従って本文へ反映

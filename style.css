@@ -19,6 +19,8 @@
   --bg-callout:      #f9f9f9;
   --bg-hide-col:     #ccc;
   --bg-copy-icon:    #fff;
+  --bg-input:        #fff;
+  --bg-button:       #efefef;
 
   --fg-header:       #1c1c1c;
   --link-header:     #77a1ff;
@@ -40,6 +42,8 @@
   --fg-blockquote:   #565656;
   --fg-th:           #1c1c1c;
   --fg-td:           #1c1c1c;
+  --fg-input:        #000;
+  --fg-button:       #1c1c1c;
 
   --border:          #e2e2e2;
   --border-h:        #bbb;
@@ -79,6 +83,8 @@
   --bg-callout:      #252525;
   --bg-hide-col:     #555;
   --bg-copy-icon:    #2e2e2e;
+  --bg-input:        #000;
+  --bg-button:       #474747;
 
   --fg-header:       #e0e0dc;
   --link-header:     #6ea8fe;
@@ -100,6 +106,8 @@
   --fg-blockquote:   #bbb;
   --fg-th:           #e0e0dc;
   --fg-td:           #e0e0dc;
+  --fg-input:        #fff;
+  --fg-button:       #fff;
 
   --border:          #363636;
   --border-h:        #555;
@@ -133,6 +141,17 @@ body {
   letter-spacing: 1px;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+button {
+  border-width: 1px;
+  color: var(--fg-button);
+  background: var(--bg-button);
+}
+input {
+  border: 1px solid;
+  color: var(--fg-input);
+  background: var(--bg-input);
 }
 
 /* ----------------------------------------
@@ -174,7 +193,6 @@ header a:hover { color: var(--link-header-hover); text-decoration: underline; }
 #pull-btn, #push-btn {
   letter-spacing: 1px;
   padding: 2px 5px;
-  border-width: 1px;
   border-radius: 2px;
 }
 
@@ -228,7 +246,7 @@ header a:hover { color: var(--link-header-hover); text-decoration: underline; }
   background: var(--bg-push-d-btn);
   color: var(--fg-push-d-btn);
 }
-#cancel-pull-btn, #pull-diff-btn, #push-diff-btn { padding: 1px 4px; border-width: 1px; }
+#cancel-pull-btn, #pull-diff-btn, #push-diff-btn { padding: 1px 4px; }
 
 .btn-toggle { border: none; background: none; user-select: none; }
 .tip { display: inline-flex; align-items: center; gap: 6px; }
@@ -622,7 +640,7 @@ input[type="range"] {
 }*/
 
 /* ----------------------------------------
-   Theme selector
+   Settings
 ---------------------------------------- */
 
 .theme-selector {
@@ -636,4 +654,18 @@ input[type="range"] {
   gap: 6px;
   cursor: pointer;
   color: var(--fg-previwe);
+}
+
+.shortcut-setting {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 8px 0;
+}
+.shortcut-setting input {
+  width: 90px;
+  padding: 3px 5px;
+}
+.shortcut-setting button {
+  padding: 1px 2px;
 }
