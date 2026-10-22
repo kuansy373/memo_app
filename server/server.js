@@ -134,12 +134,6 @@ function requireAuth(req, res, next) {
 // API
 // ----------------------------------------
 
-// 全キー一覧
-app.get('/api/notes', requireAuth, async (req, res) => {
-  const result = await pool.query('SELECT path FROM notes');
-  res.json({ keys: result.rows.map(r => r.path) });
-});
-
 // ノート取得
 app.get('/api/notes/*path', requireAuth, async (req, res) => {
   const path = '/' + req.params['path'].join('/');
@@ -189,32 +183,6 @@ app.post('/api/notes/rename', requireAuth, async (req, res) => {
   );
 
   res.json({ ok: true, updated: result.rowCount });
-});
-
-// 全ノート一括取得
-app.get('/api/sync', requireAuth, async (req, res) => {
-  const result = await pool.query('SELECT path, content, updated_at FROM notes');
-  res.json({ notes: result.rows });
-});
-
-// 全ノート一括保存
-app.post('/api/sync', requireAuth, async (req, res) => {
-  const { notes } = req.body;
-  let last_updated;
-  for (const [path, content] of Object.entries(notes)) {
-    const result = await pool.query(
-      'INSERT INTO notes (path, content) VALUES ($1, $2) ON CONFLICT (path) DO UPDATE SET content = $2, updated_at = NOW() RETURNING updated_at',
-      [path, content]
-    );
-    last_updated = result.rows[0].updated_at;
-  }
-  res.json({ ok: true, last_updated });
-});
-
-// 最終更新時刻を取得
-app.get('/api/sync/status', requireAuth, async (req, res) => {
-  const result = await pool.query('SELECT MAX(updated_at) as last_updated FROM notes');
-  res.json({ last_updated: result.rows[0].last_updated });
 });
 
 // ----------------------------------------
