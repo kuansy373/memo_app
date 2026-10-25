@@ -277,19 +277,17 @@ editor.addEventListener('input', () => {
 
 editor.addEventListener('paste', e => {
   const text = e.clipboardData.getData('text');
-  const base = `${location.origin}${APP_BASE}`;
-  if (!text.startsWith(base)) return;
+  if (!text.includes('/') || !text.includes('%')) return;
 
-  e.preventDefault();
   const decoded = text
     .split('/')
     .map(s => { try { return decodeURIComponent(s); } catch { return s; } })
     .join('/');
 
-  const start = editor.selectionStart;
-  const end = editor.selectionEnd;
-  editor.value = editor.value.slice(0, start) + decoded + editor.value.slice(end);
-  editor.selectionStart = editor.selectionEnd = start + decoded.length;
+  if (decoded === text) return;
+
+  e.preventDefault();
+  document.execCommand('insertText', false, decoded);
   saveCurrentNote();
   update();
 });
