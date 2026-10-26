@@ -120,3 +120,17 @@ export async function renameNote(oldPath, currentEditorValue) {
 
   return newPath;
 }
+
+// ----------------------------------------
+// スクロール位置
+// ----------------------------------------
+
+const scrollPositions = new Map();
+
+export function saveScrollPosition(path, scrollTop) {
+  scrollPositions.set(path, scrollTop);
+}
+
+export function getScrollPosition(path) {
+  return scrollPositions.get(path) ?? 0;
+}

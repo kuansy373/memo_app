@@ -11,6 +11,7 @@ import {
   initialNoteKey, currentNote,
   switchNote, navigateToIndex,
   pushBreadcrumbsToURL, renameNote,
+  saveScrollPosition, getScrollPosition
 } from './navigation.js';
 import {
   isLoggedIn,
@@ -129,11 +130,13 @@ function saveCurrentNote() {
 // ----------------------------------------
 
 function applyNoteSwitch(path) {
+  saveScrollPosition(currentNote, preview.scrollTop);
   const { content, breadcrumbs: newCrumbs } = switchNote(path);
   _applyNoteSwitchResult(content, newCrumbs);
 }
 
 function applyNavigateToIndex(index) {
+  saveScrollPosition(currentNote, preview.scrollTop);
   const { content, breadcrumbs: newCrumbs } = navigateToIndex(index);
   _applyNoteSwitchResult(content, newCrumbs);
 }
@@ -149,6 +152,7 @@ function _applyNoteSwitchResult(content, newCrumbs) {
     checkPushStatus();
   }
   checkCurrentNote();
+  preview.scrollTop = getScrollPosition(currentNote);
 }
 
 // ----------------------------------------
@@ -237,6 +241,7 @@ function togglePane() {
 // Init
 // ----------------------------------------
 
+history.scrollRestoration = 'manual';
 initNotes(initialNoteKey);
 initSync({ editor, preview, update, applyModeClass, updateModeLabel, setVisible });
 
